@@ -18,5 +18,8 @@ done
 ln -sf "$DIR/claude/settings.json" ~/.claude/settings.json
 echo "linked: ~/.claude/settings.json"
 
+ln -sf "$DIR/claude/CLAUDE.md" ~/.claude/CLAUDE.md
+echo "linked: ~/.claude/CLAUDE.md"
+
 echo ""
 echo "Done — Claude config linked from dotfiles."
