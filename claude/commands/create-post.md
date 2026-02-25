@@ -12,7 +12,7 @@ If arguments were provided, use them as the topic. Otherwise, ask the user:
 3. Is this part of a series? If so, which one and what order number?
 
 **Check for session logs (if the directory exists):**
-1. Check if `/home/me/productive_learning/projects/mylearnbase/.log/` exists
+1. Check if `.log/` exists in the **current working directory** (not in the mylearnbase project — wherever this session is running from)
 2. If it does and contains files, tell the user what's available and ask which (if any) to use for context
 3. If the user picks specific logs, read them now — you'll pass the key details to the subagent
 4. If `.log/` doesn't exist or is empty, skip this step — no need to mention it to the user
