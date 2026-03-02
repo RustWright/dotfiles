@@ -1,11 +1,43 @@
 #!/bin/bash
-# Stop hook: auto-commit if session ended without explicit commit.
-# Runs when Claude Code stops. If Claude already committed via CLAUDE.md
-# protocol, there are no changes and this exits immediately.
+# Stop hook: commit current repo, and if inside a submodule, sync logs +
+# update the parent repo's submodule pointer automatically.
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+commit_and_push() {
+  local dir="$1"
+  local msg="$2"
+  git -C "$dir" add -A
+  git -C "$dir" diff --staged --quiet && return 0  # nothing to commit
+  git -C "$dir" commit -m "$msg"
+  git -C "$dir" push 2>/dev/null || true
+}
+
+# ── abort if not in a git repo ────────────────────────────────────────────────
 
 git rev-parse --git-dir &>/dev/null || exit 0
-git diff --quiet && git diff --staged --quiet && exit 0
 
-git add -A
-git commit -m "auto: session end $(date '+%Y-%m-%d %H:%M')"
-git push 2>/dev/null || true
+CWD="$(git rev-parse --show-toplevel)"
+
+# ── commit current repo if there are changes ─────────────────────────────────
+
+git -C "$CWD" diff --quiet && git -C "$CWD" diff --staged --quiet || \
+  commit_and_push "$CWD" "auto: session end $(date '+%Y-%m-%d %H:%M')"
+
+# ── submodule handling ────────────────────────────────────────────────────────
+
+PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
+[ -z "$PARENT" ] && exit 0  # not a submodule — done
+
+PROJECT="$(basename "$CWD")"
+LOG_SRC="$CWD/.log"
+LOG_DST="$PARENT/logs/$PROJECT"
+
+# Copy any new log files into the parent's logs/<project>/ directory
+if [ -d "$LOG_SRC" ] && [ -n "$(ls -A "$LOG_SRC" 2>/dev/null)" ]; then
+  mkdir -p "$LOG_DST"
+  cp -r "$LOG_SRC/." "$LOG_DST/"
+fi
+
+# Commit parent: updated logs + submodule pointer
+commit_and_push "$PARENT" "auto: sync $PROJECT $(date '+%Y-%m-%d %H:%M')"

@@ -123,9 +123,10 @@ cargo run
 
 **Tell the subagent to:**
 1. Create all the files using the Write tool
-2. Run `git init` inside the project directory using the Bash tool
-3. Run `git add -A && git commit -m "init: scaffold <PROJECT_NAME>"` inside the project directory
-4. Report back: list of all files created, git init status
+2. Create `/home/me/productive_learning/logs/<PROJECT_NAME>/` with a `.gitkeep` file inside (so the parent repo tracks a slot for this project's logs from the start)
+3. Run `git init` inside the project directory using the Bash tool
+4. Run `git add -A && git commit -m "init: scaffold <PROJECT_NAME>"` inside the project directory
+5. Report back: list of all files created, git init status
 
 ## Phase 3: Git remote + submodule (back in main conversation)
 

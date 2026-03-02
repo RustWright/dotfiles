@@ -8,21 +8,24 @@ git submodule update --init --recursive
 ```
 
 ### At the END of every session (before closing):
-If there are uncommitted changes:
+
+**Step 1 — Commit and push the current repo:**
 1. Stage all changes: `git add -A`
 2. Commit with a concise message describing what was done
 3. Push: `git push`
+
+**Step 2 — If inside a submodule, sync to the parent repo:**
+
+Check: `git rev-parse --show-superproject-working-tree`
+
+If that returns a path (you are in a submodule):
+1. Identify the parent path (output of the above command)
+2. Copy any files from `.log/` into `<parent>/logs/<project-name>/`
+3. From the parent: `git add -A && git commit -m "sync <project-name>: <brief description>" && git push`
+
+This keeps the parent's submodule pointer current and syncs logs to the private repo in one step.
 
 **Commit message format (SINGLE LINE, under 50 chars):**
 - `Session N: Brief topic`
 - `[type]: Brief description`
 - NO multi-line commits, NO co-author tags, NO emoji
-
-### Submodule pointer updates (productive-learning)
-When a project repo (submodule) advances, update the parent pointer weekly or when switching machines:
-```bash
-# From ~/productive_learning/
-git add projects/mylearnbase  # or img_gen
-git commit -m "update mylearnbase submodule pointer"
-git push
-```
