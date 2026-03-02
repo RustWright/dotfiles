@@ -4,6 +4,7 @@
 If the current directory is a git repo, run:
 ```bash
 git pull --rebase --autostash
+git submodule update --init --recursive
 ```
 
 ### At the END of every session (before closing):
