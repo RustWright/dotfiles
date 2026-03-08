@@ -1,6 +1,7 @@
 {
+  "model": "opus",
   "hooks": {
-    "Stop": [
+    "SessionEnd": [
       {
         "matcher": "",
         "hooks": [
@@ -17,5 +18,5 @@
   },
   "alwaysThinkingEnabled": true,
   "skipDangerousModePermissionPrompt": true,
-  "model": "opus"
+  "effortLevel": "high"
 }
