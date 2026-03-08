@@ -1,6 +1,12 @@
 #!/bin/bash
-# Stop hook: commit current repo, and if inside a submodule, sync logs +
+# SessionEnd hook: commit current repo, and if inside a submodule, sync logs +
 # update the parent repo's submodule pointer automatically.
+
+# ── debug log (remove after confirming hook works) ──────────────────────────
+DEBUG_LOG="/tmp/claude-session-end-debug.log"
+echo "=== SessionEnd hook fired: $(date) ===" >> "$DEBUG_LOG"
+echo "PWD: $(pwd)" >> "$DEBUG_LOG"
+echo "CLAUDE_WORKING_DIRECTORY: ${CLAUDE_WORKING_DIRECTORY:-unset}" >> "$DEBUG_LOG"
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -21,8 +27,7 @@ CWD="$(git rev-parse --show-toplevel)"
 
 # ── commit current repo if there are changes ─────────────────────────────────
 
-git -C "$CWD" diff --quiet && git -C "$CWD" diff --staged --quiet || \
-  commit_and_push "$CWD" "auto: session end $(date '+%Y-%m-%d %H:%M')"
+commit_and_push "$CWD" "auto: session end $(date '+%Y-%m-%d %H:%M')"
 
 # ── submodule handling ────────────────────────────────────────────────────────
 
