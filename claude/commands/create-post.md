@@ -32,10 +32,10 @@ Each form has a different shape. The below is the quick-reference anchor for rou
 
 ### logbook
 
-- **Tools (installed via `uv tool install`):** `logbook init` / `what` / `why` / `scope` / `note` / `exec` / `screenshot` / `cite` / `tags` / `publish`. Cross-project — run from the project repo where the work is happening, NOT from mylearnbase.
-- **Scaffold:** `logbook init <project> <feature_name> --title "..."`. Mandatory `--title` (no auto-derivation).
-- **Capture during the work**, not after. Section ownership per `editorial/logbook.md` §3 — LLM drafts descriptive prose first (§1-4); user owns voice-bearing sections (especially §7 Notes / look-back). **The LLM does not draft §7 in the user's voice without explicit user input.**
-- **Publish when feature lands:** `logbook publish <slug>` — runs `showboat verify` + `zola check` automatically; output at `mylearnbase/content/posts/logbook/<project>/<slug>.md`.
+- **Tools (installed via `uv tool install`):** `logbook init` / `title` / `tags` / `exec` / `screenshot` / `cite` / `publish`. Cross-project — run from the project repo where the work is happening, NOT from mylearnbase. Prose sections (§3, §4, §5, §7) are filled by direct-editing the capture file at `<repo>/logbook/_drafts/<slug>.md`; there's no CLI for them.
+- **Scaffold:** `logbook init <project> <feature_name> --title "..."`. Mandatory `--title` (no auto-derivation); use `logbook title <slug> "..."` post-init to revise.
+- **Capture during the work**, not after. Section ownership per `editorial/logbook.md` §3 — LLM drafts descriptive prose first (§3-4) by editing the capture file; user owns voice-bearing sections (especially §7 Notes / look-back). **The LLM does not draft §7 in the user's voice without explicit user input.**
+- **Publish when feature lands:** `logbook publish <slug>` — runs `showboat verify` + `zola check` automatically; output at `mylearnbase/content/posts/logbook/<project>/<slug>/index.md` (Zola page bundle: slug directory + `index.md` + sibling images). Publish auto-rewrites image refs to `./<filename>` and normalizes stale cross-post link forms (`.md` ↔ `/index.md`).
 
 ### concepts
 
