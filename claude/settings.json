@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/me/.dotfiles/scripts/session-end.sh"
+            "command": "~/.dotfiles/scripts/session-end.sh"
           }
         ]
       }
