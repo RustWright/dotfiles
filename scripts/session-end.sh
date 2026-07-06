@@ -19,6 +19,19 @@ commit_and_push() {
   git -C "$dir" push 2>/dev/null || true
 }
 
+# Returns 0 if the submodule's current HEAD is present on its remote, 1 if not.
+# Guards the parent gitlink: recording a pointer to an unpushed submodule commit
+# produces a dangling reference other clones (and fresh submodule updates) fail
+# to fetch — exactly the breakage that stranded omni-me at commit 1357151c.
+submodule_head_pushed() {
+  local dir="$1"
+  local sha="$2"
+  # A successful push updates the local remote-tracking refs; a failed one does
+  # not. So if any origin/* ref contains $sha, it genuinely reached the remote.
+  # No network round-trip needed, and it fails closed if the push silently died.
+  [ -n "$(git -C "$dir" branch -r --contains "$sha" 2>/dev/null)" ]
+}
+
 # ── abort if not in a git repo ────────────────────────────────────────────────
 
 git rev-parse --git-dir &>/dev/null || exit 0
@@ -44,5 +57,16 @@ if [ -d "$LOG_SRC" ] && [ -n "$(ls -A "$LOG_SRC" 2>/dev/null)" ]; then
   cp -r "$LOG_SRC/." "$LOG_DST/"
 fi
 
-# Commit parent: updated logs + submodule pointer
-commit_and_push "$PARENT" "auto: sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
+# Commit parent: logs always, but the submodule pointer only if it was pushed.
+git -C "$PARENT" add -A -- "logs/$PROJECT" 2>/dev/null || true
+
+SUB_HEAD="$(git -C "$CWD" rev-parse HEAD)"
+if submodule_head_pushed "$CWD" "$SUB_HEAD"; then
+  git -C "$PARENT" add -- "$CWD"
+else
+  echo "WARNING: $PROJECT HEAD $SUB_HEAD not on remote; pointer NOT recorded" | tee -a "$DEBUG_LOG"
+fi
+
+git -C "$PARENT" diff --staged --quiet && exit 0  # nothing to commit
+git -C "$PARENT" commit -m "auto: sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
+git -C "$PARENT" push 2>/dev/null || true
