@@ -22,9 +22,13 @@ If that returns a path (you are in a submodule):
 1. Identify the parent path (output of the above command)
 2. Copy any files from `.log/` into `<parent>/logs/<project-name>/`
 3. Copy any files from `.curiosities/` into `<parent>/curiosities/<project-name>/` (skip if `.curiosities/` doesn't exist)
-4. From the parent: `git add -A && git commit -m "sync <project-name>: <brief description>" && git push`
+4. From the parent, stage **only this project's paths** — **never `git add -A` here.** The parent working tree often carries unrelated pending changes (other submodules sitting on stale checkouts, other projects' log edits); `git add -A` sweeps all of that into the sync commit — including **backward submodule-pointer regressions** for projects you never touched. Stage explicitly instead:
+   - `git -C <parent> add logs/<project-name> <submodule-path>` — and also `curiosities/<project-name>` **only if** you created it this session (`git add` errors on a path that doesn't exist). `<submodule-path>` is this project's path inside the parent, typically `projects/<project-name>`.
+   - **Verify scope before committing:** `git -C <parent> diff --cached --stat` must list *only* this project's `logs/`, its `curiosities/` (if any), and its own submodule pointer — nothing else. If anything else is staged, unstage it: `git -C <parent> restore --staged <path>`.
+   - `git -C <parent> commit -m "sync <project-name>: <brief description>"`
+   - `git -C <parent> push`
 
-This keeps the parent's submodule pointer current and syncs logs + curiosities to the private repo in one step.
+This keeps the parent's submodule pointer current and syncs logs + curiosities to the private repo in one step — without disturbing other projects' pending state.
 
 **Commit message format (SINGLE LINE, under 50 chars):**
 - `Session N: Brief topic`
