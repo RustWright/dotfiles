@@ -1,72 +1,69 @@
 #!/bin/bash
-# SessionEnd hook: commit current repo, and if inside a submodule, sync logs +
-# update the parent repo's submodule pointer automatically.
+# SessionEnd hook: file the readable session log, commit work in the current repo
+# (never sweeping submodule pointers), and — inside a submodule — sync logs to the
+# parent and record the submodule pointer ONLY if it is already pushed.
+#
+# Two independent safety rules, both learned the hard way:
+#   1. A root/parent session must NOT auto-commit submodule pointer bumps. A bare
+#      `git add -A` in the parent stages every dirty gitlink, recording a pointer
+#      to an unpushed (or unrelated, in-flight) submodule commit — a dangling
+#      gitlink that breaks fresh clones and `submodule update`. So we stage work
+#      but then unstage every submodule path before committing.
+#   2. A submodule session MAY advance the parent's pointer, but only when that
+#      submodule HEAD is already on its remote (else the same dangling gitlink).
+#      That guarded bump is a deliberate integration; the sweep in rule 1 is not.
 
-# ── debug log (remove after confirming hook works) ──────────────────────────
 DEBUG_LOG="/tmp/claude-session-end-debug.log"
-echo "=== SessionEnd hook fired: $(date) ===" >> "$DEBUG_LOG"
-echo "PWD: $(pwd)" >> "$DEBUG_LOG"
-echo "CLAUDE_WORKING_DIRECTORY: ${CLAUDE_WORKING_DIRECTORY:-unset}" >> "$DEBUG_LOG"
+echo "=== SessionEnd: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
 
-# ── helpers ──────────────────────────────────────────────────────────────────
-
-commit_and_push() {
-  local dir="$1"
-  local msg="$2"
-  git -C "$dir" add -A
-  git -C "$dir" diff --staged --quiet && return 0  # nothing to commit
-  git -C "$dir" commit -m "$msg"
-  git -C "$dir" push 2>/dev/null || true
-}
-
-# Returns 0 if the submodule's current HEAD is present on its remote, 1 if not.
-# Guards the parent gitlink: recording a pointer to an unpushed submodule commit
-# produces a dangling reference other clones (and fresh submodule updates) fail
-# to fetch — exactly the breakage that stranded omni-me at commit 1357151c.
-submodule_head_pushed() {
-  local dir="$1"
-  local sha="$2"
-  # A successful push updates the local remote-tracking refs; a failed one does
-  # not. So if any origin/* ref contains $sha, it genuinely reached the remote.
-  # No network round-trip needed, and it fails closed if the push silently died.
-  [ -n "$(git -C "$dir" branch -r --contains "$sha" 2>/dev/null)" ]
-}
-
-# ── abort if not in a git repo ────────────────────────────────────────────────
+DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 git rev-parse --git-dir &>/dev/null || exit 0
-
 CWD="$(git rev-parse --show-toplevel)"
 
-# ── commit current repo if there are changes ─────────────────────────────────
-
-commit_and_push "$CWD" "auto: session end $(date '+%Y-%m-%d %H:%M')"
-
-# ── submodule handling ────────────────────────────────────────────────────────
+# ── file the readable log-so-far (replaces the manual /export ritual) ──────────
+python3 "$DOTFILES/file-session-log.py" --repo "$CWD" >> "$DEBUG_LOG" 2>&1 || true
 
 PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
-[ -z "$PARENT" ] && exit 0  # not a submodule — done
 
-PROJECT="$(basename "$CWD")"
-LOG_SRC="$CWD/.log"
-LOG_DST="$PARENT/logs/$PROJECT"
-
-# Copy any new log files into the parent's logs/<project>/ directory
-if [ -d "$LOG_SRC" ] && [ -n "$(ls -A "$LOG_SRC" 2>/dev/null)" ]; then
-  mkdir -p "$LOG_DST"
-  cp -r "$LOG_SRC/." "$LOG_DST/"
+# Root/parent session: mirror the gitignored .log/ into tracked logs/root/.
+if [ -z "$PARENT" ] && [ -d "$CWD/.log" ]; then
+  mkdir -p "$CWD/logs/root"
+  cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true
 fi
 
-# Commit parent: logs always, but the submodule pointer only if it was pushed.
+# ── commit work in the current repo, EXCLUDING submodule pointer bumps (rule 1)
+git -C "$CWD" add -A
+while IFS= read -r sub; do
+  [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
+done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
+
+if ! git -C "$CWD" diff --staged --quiet; then
+  git -C "$CWD" commit -m "auto: session end $(date '+%Y-%m-%d %H:%M')"
+  git -C "$CWD" push 2>/dev/null || true
+fi
+
+# ── submodule session: sync logs to the parent + guarded pointer bump (rule 2) ─
+[ -z "$PARENT" ] && exit 0
+
+PROJECT="$(basename "$CWD")"
+if [ -d "$CWD/.log" ]; then
+  mkdir -p "$PARENT/logs/$PROJECT"
+  cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true
+fi
 git -C "$PARENT" add -A -- "logs/$PROJECT" 2>/dev/null || true
 
+# Record THIS submodule's pointer only if its HEAD is present on the remote. A
+# successful push updates the local remote-tracking refs; a failed one does not,
+# so this fails closed if the push silently died — no network round-trip needed.
 SUB_HEAD="$(git -C "$CWD" rev-parse HEAD)"
-if submodule_head_pushed "$CWD" "$SUB_HEAD"; then
+if [ -n "$(git -C "$CWD" branch -r --contains "$SUB_HEAD" 2>/dev/null)" ]; then
   git -C "$PARENT" add -- "$CWD"
 else
   echo "WARNING: $PROJECT HEAD $SUB_HEAD not on remote; pointer NOT recorded" | tee -a "$DEBUG_LOG"
 fi
 
-git -C "$PARENT" diff --staged --quiet && exit 0  # nothing to commit
-git -C "$PARENT" commit -m "auto: sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
-git -C "$PARENT" push 2>/dev/null || true
+if ! git -C "$PARENT" diff --staged --quiet; then
+  git -C "$PARENT" commit -m "auto: sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
+  git -C "$PARENT" push 2>/dev/null || true
+fi
