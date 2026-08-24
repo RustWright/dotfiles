@@ -13,11 +13,17 @@ echo "=== PreCompact: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# The hook hands us JSON on stdin; transcript_path is the authoritative .jsonl for
+# THIS session - more reliable than guessing the newest one in the project dir.
+HOOK_JSON="$(timeout 2 cat 2>/dev/null || true)"
+TRANSCRIPT="$(printf '%s' "$HOOK_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null || true)"
+
 git rev-parse --git-dir &>/dev/null || exit 0
 CWD="$(git rev-parse --show-toplevel)"
 
-# File the readable log-so-far.
-python3 "$DOTFILES/file-session-log.py" --repo "$CWD" >> "$DEBUG_LOG" 2>&1 || true
+# File the readable log-so-far; surface the one-line result (filed/skipped) to the
+# user, keeping full detail (incl. stderr) in the debug log.
+python3 "$DOTFILES/file-session-log.py" --repo "$CWD" --transcript "$TRANSCRIPT" 2>>"$DEBUG_LOG" | tee -a "$DEBUG_LOG"
 
 # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
 # tracked parent dirs.

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """File the current session's transcript into the repo's .log/ directory.
 
-Called by the SessionEnd hook. Locates the harness's .jsonl for this session,
-renders it to readable text via render-session.py, and writes it to .log/ so it
-can be committed and synced across devices - replacing the manual
+Called by the SessionEnd and PreCompact hooks. Locates the harness's .jsonl for
+this session (the hook passes its authoritative path via --transcript), renders
+it to readable text via render-session.py, and writes it to .log/ so it can be
+committed and synced across devices - replacing the manual
 /export -> hand-typed-filename -> copy ritual.
 
 Usage:
-    file-session-log.py [--session-id ID] [--repo PATH] [--dry-run]
+    file-session-log.py [--session-id ID] [--transcript PATH] [--repo PATH] [--dry-run]
 """
 
 import argparse
@@ -60,12 +61,12 @@ def git_repo_root(start):
 def session_start(transcript):
     """The session's start time - the first transcript record's own timestamp.
 
-    Naming by START time (not mtime) is what keeps a growing session under ONE
-    filename: /compact and SessionEnd re-render the same, longer session and must
-    overwrite the same file rather than leave stale partial duplicates. The start
-    timestamp is fixed for the life of the session, so the name is stable across
-    re-files while distinct sessions still sort chronologically by name. Falls
-    back to mtime if the transcript has no parseable timestamp.
+    Used ONLY to name a session's log the first time it is filed. It is NOT a
+    stable anchor for re-files: compaction rewrites the head of the .jsonl, so a
+    later call can return a different 'first timestamp' (that drift is exactly
+    what sprayed one session across several dated files). choose_log_path
+    therefore reuses an existing per-session filename instead of recomputing this.
+    Falls back to mtime if the transcript has no parseable timestamp.
     """
     try:
         with transcript.open(encoding="utf-8") as fh:
@@ -84,22 +85,25 @@ def session_start(transcript):
 def choose_log_path(log_dir, transcript, rendered):
     """Decide the filename for this session's log, and whether to write at all.
 
-    Design responds to three documented archive failures:
+    Design responds to documented archive failures:
       - a byte-identical duplicate session (a `--` filename-typo collision),
       - a log misdated because the filename used 'today' for a session that had
-        actually run the day before, and
-      - same-day logs the date-only name couldn't order (which came first?).
+        actually run the day before,
+      - same-day logs the date-only name couldn't order (which came first?), and
+      - one session sprayed across several files because the naming date was
+        recomputed from the transcript head, which compaction keeps rewriting.
 
-    So the name carries the session's START time to the second, so same-day logs
-    sort chronologically from the title alone; dedup is by CONTENT - if this exact
-    transcript is already filed under any name, skip. Naming by start-time +
-    session-id keeps files unique without the collision counter that produced the
-    `-pt2` duplicates, and re-filing the same (grown) session overwrites its own
-    file idempotently because the start time doesn't move.
+    So: dedup is by CONTENT - if this exact transcript is already filed under any
+    name, skip. Identity is the SESSION ID, which never moves - if this session
+    already has a log, reuse that exact name and overwrite it, so a grown or
+    recompacted session stays under ONE file regardless of timestamp drift. Only a
+    brand-new session mints a fresh `<start-time>-session-<id8>.txt` name, whose
+    start-time-to-the-second keeps same-day sessions ordered from the title alone.
 
     Returns a Path to write to, or None to skip writing.
     """
     digest = hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+    session_short = transcript.stem[:8]
     if log_dir.is_dir():
         for existing in log_dir.glob("*.txt"):
             try:
@@ -107,15 +111,20 @@ def choose_log_path(log_dir, transcript, rendered):
                     return None  # already filed, byte-for-byte
             except OSError:
                 continue
+        # Reuse this session's existing file (stable across compaction drift).
+        prior = sorted(log_dir.glob(f"*-session-{session_short}.txt"))
+        if prior:
+            return prior[0]
 
     stamp = session_start(transcript).strftime("%Y-%m-%d-%H%M%S")
-    session_short = transcript.stem[:8]
     return log_dir / f"{stamp}-session-{session_short}.txt"
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--session-id")
+    parser.add_argument("--transcript", type=Path,
+                        help="explicit transcript .jsonl (the hook's stdin transcript_path)")
     parser.add_argument("--repo", default=".", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
@@ -124,7 +133,12 @@ def main():
     if repo is None:
         sys.exit("not inside a git repository - nothing to file")
 
-    transcript = find_transcript(repo, args.session_id)
+    # Prefer the authoritative transcript the hook handed us; fall back to the
+    # newest .jsonl for this repo only when it is missing or unreadable.
+    if args.transcript and args.transcript.is_file():
+        transcript = args.transcript
+    else:
+        transcript = find_transcript(repo, args.session_id)
     if transcript is None:
         sys.exit(f"no transcript found for {repo}")
 
@@ -134,7 +148,7 @@ def main():
 
     target = choose_log_path(repo / ".log", transcript, rendered)
     if target is None:
-        print("skipped: choose_log_path declined to write")
+        print("skipped: this exact transcript is already filed")
         return
 
     if args.dry_run:
