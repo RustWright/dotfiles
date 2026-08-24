@@ -55,11 +55,18 @@ This project follows the structured process defined in `PROJECT_PROCESS.md`.
 
 ## Session Management
 
-See `~/.claude/CLAUDE.md` for git pull/push/submodule sync protocol — that file governs all session start/end git operations.
+Git sync — start-of-session pull, end-of-session commit/push, and log + curiosity
+parent-sync — is **automatic** via the session hooks. See `~/.claude/CLAUDE.md`
+§ Session Sync. Do not run any of it by hand (no `git pull`, no `/export`, no manual
+parent-sync); doing so fights the hooks.
 
 Project-specific session steps:
-- **Start:** Read `project.md` to find current state and next session. Confirm with user before proceeding. If resuming mid-session, read `tasks.md` and `architecture.md` for context.
-- **End:** Remind user to run `/export`, save to `.log/` as `session-0X-[type]-cycle-Y.txt`. Update `project.md` session log. Update `tasks.md` if Session 4.
+- **Start:** Re-verify live state (`git status`, read what you'll touch), then read
+  `project.md` for current state and next session; confirm with the user before
+  proceeding. If resuming mid-session, read `tasks.md` and `architecture.md`. Inherit
+  decisions already agreed in prior sessions — don't re-derive settled context.
+- **End:** Update `project.md`'s session log and `tasks.md` (Session 4). The transcript
+  is rendered into `.log/` and synced to the parent automatically — no `/export` step.
 
 ### Session Flow Reference
 ```

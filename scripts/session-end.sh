@@ -26,10 +26,12 @@ python3 "$DOTFILES/file-session-log.py" --repo "$CWD" >> "$DEBUG_LOG" 2>&1 || tr
 
 PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
 
-# Root/parent session: mirror the gitignored .log/ into tracked logs/root/.
-if [ -z "$PARENT" ] && [ -d "$CWD/.log" ]; then
-  mkdir -p "$CWD/logs/root"
-  cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true
+# Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
+# tracked parent dirs (same convention the manual protocol used — these dirs are
+# parent-synced, never committed inside the project).
+if [ -z "$PARENT" ]; then
+  [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
+  [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
 fi
 
 # ── commit work in the current repo, EXCLUDING submodule pointer bumps (rule 1)
@@ -47,11 +49,9 @@ fi
 [ -z "$PARENT" ] && exit 0
 
 PROJECT="$(basename "$CWD")"
-if [ -d "$CWD/.log" ]; then
-  mkdir -p "$PARENT/logs/$PROJECT"
-  cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true
-fi
-git -C "$PARENT" add -A -- "logs/$PROJECT" 2>/dev/null || true
+[ -d "$CWD/.log" ] && { mkdir -p "$PARENT/logs/$PROJECT"; cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true; }
+[ -d "$CWD/.curiosities" ] && { mkdir -p "$PARENT/curiosities/$PROJECT"; cp -r "$CWD/.curiosities/." "$PARENT/curiosities/$PROJECT/" 2>/dev/null || true; }
+git -C "$PARENT" add -A -- "logs/$PROJECT" "curiosities/$PROJECT" 2>/dev/null || true
 
 # Record THIS submodule's pointer only if its HEAD is present on the remote. A
 # successful push updates the local remote-tracking refs; a failed one does not,

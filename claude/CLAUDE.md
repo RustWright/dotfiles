@@ -1,55 +1,65 @@
-## Session Sync Protocol
+## Session Sync — Automatic (do nothing)
 
-### At the START of every session (do this first, before anything else):
-If the current directory is a git repo, run:
-```bash
-git pull --rebase --autostash
-git submodule update --init --recursive
-```
+Session git sync is handled entirely by hooks in `~/.dotfiles/scripts/`, wired in
+`~/.dotfiles/claude/settings.json`. **Do not run any start- or end-of-session git
+ritual by hand** — no `git pull` at the start, no `/export`, no commit / push /
+parent-sync at the end. Doing it manually now *fights* the hooks. What runs for you:
 
-### At the END of every session (before closing):
+- **SessionStart** (`session-start.sh`): fast-forwards `~/.dotfiles` itself (so the
+  workflow machinery stays current across devices), pulls the current repo with
+  `--autostash`, then fast-forwards each *clean* submodule and leaves *dirty* ones
+  untouched (never strands in-flight work).
+- **PreCompact** (`session-compact.sh`) and **SessionEnd** (`session-end.sh`): render
+  this session's transcript into a readable `.log/` file, mirror `.log/` and
+  `.curiosities/` into the parent's `logs/<project>/` and `curiosities/<project>/`,
+  then commit + push work in the current repo. Inside a submodule they also advance
+  the parent's pointer — **but only if that submodule HEAD is already on its remote.**
 
-**Step 1 — Commit and push the current repo:**
-1. Stage all changes: `git add -A`
-2. Commit with a concise message describing what was done
-3. Push: `git push`
+**The invariant behind all of it:** the parent never records a pointer to an unpushed
+submodule commit (a dangling gitlink breaks fresh clones and `submodule update`).
+That is why pointer integration is *deliberate*, never a side effect of a checkpoint.
+To advance parent pointers on purpose, run `~/.dotfiles/scripts/sync_pointers.py`
+(`--dry-run` previews; it skips any submodule whose HEAD isn't pushed).
 
-**Step 2 — If inside a submodule, sync to the parent repo:**
+**If you do commit by hand** (e.g. a deliberate mid-session commit): keep the message
+a SINGLE LINE under 50 chars — `Session N: topic` or `[type]: description`, no
+multi-line, no co-author tags, no emoji. In a *parent* repo never `git add -A` — it
+sweeps other projects' submodule pointers into your commit, including backward
+pointer regressions for projects you never touched; stage explicit paths only.
 
-Check: `git rev-parse --show-superproject-working-tree`
+## Starting a fresh session: re-verify state, inherit decisions
 
-If that returns a path (you are in a submodule):
-1. Identify the parent path (output of the above command)
-2. Copy any files from `.log/` into `<parent>/logs/<project-name>/`
-3. Copy any files from `.curiosities/` into `<parent>/curiosities/<project-name>/` (skip if `.curiosities/` doesn't exist)
-4. From the parent, stage **only this project's paths** — **never `git add -A` here.** The parent working tree often carries unrelated pending changes (other submodules sitting on stale checkouts, other projects' log edits); `git add -A` sweeps all of that into the sync commit — including **backward submodule-pointer regressions** for projects you never touched. Stage explicitly instead:
-   - `git -C <parent> add logs/<project-name> <submodule-path>` — and also `curiosities/<project-name>` **only if** you created it this session (`git add` errors on a path that doesn't exist). `<submodule-path>` is this project's path inside the parent, typically `projects/<project-name>`.
-   - **Verify scope before committing:** `git -C <parent> diff --cached --stat` must list *only* this project's `logs/`, its `curiosities/` (if any), and its own submodule pointer — nothing else. If anything else is staged, unstage it: `git -C <parent> restore --staged <path>`.
-   - `git -C <parent> commit -m "sync <project-name>: <brief description>"`
-   - `git -C <parent> push`
+**Re-verify live state, always.** Run `git status`, read the files you're about to
+change, check what actually moved on disk — even when a handoff note, `tasks.md`, or
+`project.md` already describes it. Work happens fast between sessions and across
+devices, and the written description is often stale. Trust the repo, not the note.
 
-This keeps the parent's submodule pointer current and syncs logs + curiosities to the private repo in one step — without disturbing other projects' pending state.
-
-**Commit message format (SINGLE LINE, under 50 chars):**
-- `Session N: Brief topic`
-- `[type]: Brief description`
-- NO multi-line commits, NO co-author tags, NO emoji
+**Inherit settled decisions — don't re-derive them.** Direction, rationale, and
+choices a previous session already reached (and the user already agreed to) carry
+forward. A handoff exists so you pick up mid-stride, not so you re-open what's closed.
+Re-deriving obvious, already-agreed context wastes a session's opening; if a decision
+is genuinely unclear or looks contradicted by current state, ask — don't silently
+redo it. In short: **state is checked, decisions are inherited.**
 
 ## Curiosity Capture
 
-While working on any project, watch for **curiosities** — concepts the user surfaces but doesn't fully grasp. Triggers:
+While working on any project, watch for **curiosities** — concepts the user surfaces
+but doesn't fully grasp. Triggers:
 
 - User asks "how does X actually work?" or "I don't really get this"
 - You half-explain something technical and the user moves on without engaging
 - The user pauses on a concept (longer reaction, off-tangent question) suggesting it didn't land
 
-When you notice one, append a one-line entry to the project's curiosity log. Bias toward capturing — false positives are cheap; missed captures are unrecoverable. The cycle-close review pass decides what survives.
+When you notice one, append a one-line entry to the project's curiosity log. Bias
+toward capturing — false positives are cheap; missed captures are unrecoverable. The
+cycle-close review pass decides what survives. (Syncing the log to the parent is
+automatic — the session hooks handle it; you only write the entry.)
 
 **Where to write:** `<project-repo>/.curiosities/<cycle-id>.md`
 
 - Resolve `<cycle-id>` by grepping `project.md` for `Cycle \d+` (matches both `**Status:** Cycle 3 Session 5` and `**Current Phase:** Cycle 2 Session 4`). Use the highest-numbered cycle found. Filename: `cycle-<N>.md`.
 - If no `project.md` or no `Cycle \d+` match: filename is `current.md`.
-- If the `.curiosities/` directory doesn't exist in the project repo: create it AND add `.curiosities/` to the project's `.gitignore` (mirrors the `.log/` pattern — gitignored in the submodule, parent-synced at session end).
+- If the `.curiosities/` directory doesn't exist in the project repo: create it AND add `.curiosities/` to the project's `.gitignore` (mirrors the `.log/` pattern — gitignored in the submodule, parent-synced automatically at session end).
 
 **Entry format:** `- [YYYY-MM-DD] <one-line curiosity>; <one-line trigger context>`
 

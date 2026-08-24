@@ -19,11 +19,12 @@ CWD="$(git rev-parse --show-toplevel)"
 # File the readable log-so-far.
 python3 "$DOTFILES/file-session-log.py" --repo "$CWD" >> "$DEBUG_LOG" 2>&1 || true
 
-# Root/parent session: mirror the gitignored .log/ into tracked logs/root/.
+# Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
+# tracked parent dirs.
 PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
-if [ -z "$PARENT" ] && [ -d "$CWD/.log" ]; then
-  mkdir -p "$CWD/logs/root"
-  cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true
+if [ -z "$PARENT" ]; then
+  [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
+  [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
 fi
 
 # Commit WIP in the current repo, excluding submodule pointer changes, and push.
@@ -37,13 +38,13 @@ if ! git -C "$CWD" diff --staged --quiet; then
   git -C "$CWD" push 2>/dev/null || true
 fi
 
-# Submodule session: copy logs to the parent (pointer bump stays deliberate — run
-# sync_pointers.py to integrate, never automatically on a checkpoint).
-if [ -n "$PARENT" ] && [ -d "$CWD/.log" ]; then
+# Submodule session: copy logs + curiosities to the parent (pointer bump stays
+# deliberate — run sync_pointers.py to integrate, never automatically on a checkpoint).
+if [ -n "$PARENT" ]; then
   PROJECT="$(basename "$CWD")"
-  mkdir -p "$PARENT/logs/$PROJECT"
-  cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true
-  git -C "$PARENT" add -- "logs/$PROJECT" 2>/dev/null || true
+  [ -d "$CWD/.log" ] && { mkdir -p "$PARENT/logs/$PROJECT"; cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true; }
+  [ -d "$CWD/.curiosities" ] && { mkdir -p "$PARENT/curiosities/$PROJECT"; cp -r "$CWD/.curiosities/." "$PARENT/curiosities/$PROJECT/" 2>/dev/null || true; }
+  git -C "$PARENT" add -- "logs/$PROJECT" "curiosities/$PROJECT" 2>/dev/null || true
   git -C "$PARENT" diff --staged --quiet || {
     git -C "$PARENT" commit -m "auto: compact log sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
     git -C "$PARENT" push 2>/dev/null || true
