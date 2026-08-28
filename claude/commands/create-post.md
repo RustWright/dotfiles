@@ -1,6 +1,6 @@
 # Create a new blog post for My Learn Base
 
-The blog (mylearnbase) lives at `/home/me/productive_learning/projects/mylearnbase/`.
+The blog (mylearnbase) lives at `~/productive_learning/projects/mylearnbase/`.
 
 The blog has **five post forms**. Each has its own tools, section structure, and authoring rhythm — fully documented in `mylearnbase/editorial/<form>.md`. **Read the editorial doc for the chosen form before doing anything else.** The slash command is a router; the editorial docs are the source of truth.
 
@@ -22,7 +22,7 @@ If the form is clear from arguments, proceed. Otherwise ask the user once which 
 
 ## Phase 2: Read the form's editorial doc
 
-**Source of truth:** `/home/me/productive_learning/projects/mylearnbase/editorial/<form>.md`
+**Source of truth:** `~/productive_learning/projects/mylearnbase/editorial/<form>.md`
 
 The editorial doc covers: when to use, tools, section structure with LLM-vs-author ownership, anti-patterns, authoring rhythm. **Read it before executing any per-form workflow** — re-encoding section rules here would create drift.
 
@@ -77,7 +77,7 @@ Each form has a different shape. The below is the quick-reference anchor for rou
 Then before introducing a new tag, run grep against the current inventory:
 
 ```bash
-grep -rh '^tags = ' /home/me/productive_learning/projects/mylearnbase/content/posts/ | \
+grep -rh '^tags = ' ~/productive_learning/projects/mylearnbase/content/posts/ | \
   tr ',' '\n' | tr -d '[]"' | sort -u | head -40
 ```
 
@@ -88,7 +88,7 @@ If two plausible near-synonyms surface (e.g., `ui` vs `ui-development`), **surfa
 After the workflow lands a file:
 
 - For tool-backed forms (`logbook`, `workflows`): the publish tool runs `zola check --skip-external-links` automatically. Confirm zero orphans.
-- For draft-direct forms (`concepts`, `opinions`, `resources`): run `cd /home/me/productive_learning/projects/mylearnbase && zola check --skip-external-links` after `draft = false`.
+- For draft-direct forms (`concepts`, `opinions`, `resources`): run `cd ~/productive_learning/projects/mylearnbase && zola check --skip-external-links` after `draft = false`.
 - All forms: confirm `zola build` reports `0 orphan`.
 
 Then report to the user:
