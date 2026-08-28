@@ -28,7 +28,7 @@ if [ -d "$STATE/.git" ]; then
   git -C "$STATE" add -A 2>/dev/null || true
   git -C "$STATE" diff --staged --quiet 2>/dev/null || {
     git -C "$STATE" commit -q -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')" 2>/dev/null || true
-    git -C "$STATE" push -q 2>/dev/null || true
+    git -C "$STATE" push -q 2>/dev/null || echo "WARNING: claude-state push FAILED — memory is committed locally but NOT synced. Fix: git -C $STATE pull --rebase && git -C $STATE push"
   }
 fi
 
@@ -55,7 +55,7 @@ done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null 
 
 if ! git -C "$CWD" diff --staged --quiet; then
   git -C "$CWD" commit -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')"
-  git -C "$CWD" push 2>/dev/null || true
+  git -C "$CWD" push 2>/dev/null || echo "WARNING: push FAILED in $CWD — work is committed locally but NOT on the remote (usually the branch moved on another device). Fix: git -C $CWD pull --rebase && git -C $CWD push"
 fi
 
 # Submodule session: copy logs + curiosities to the parent (pointer bump stays
@@ -67,6 +67,6 @@ if [ -n "$PARENT" ]; then
   git -C "$PARENT" add -- "logs/$PROJECT" "curiosities/$PROJECT" 2>/dev/null || true
   git -C "$PARENT" diff --staged --quiet || {
     git -C "$PARENT" commit -m "auto: compact log sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
-    git -C "$PARENT" push 2>/dev/null || true
+    git -C "$PARENT" push 2>/dev/null || echo "WARNING: parent push FAILED in $PARENT — pointer/log commit is local only. Fix: git -C $PARENT pull --rebase && git -C $PARENT push"
   }
 fi
