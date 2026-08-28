@@ -122,6 +122,32 @@ def render(jsonl_path):
 
     for record in records:
         rtype = record.get("type")
+
+        # Hook output arrives as an `attachment`, which is otherwise skipped as
+        # noise. Keep it: the session hooks are this workflow's only self-report,
+        # and their stdout is the sole evidence that sync/pull/handoff actually
+        # ran. Without it "did the hook fire?" is unanswerable after the fact —
+        # the same failure shape as a push that swallowed its own error.
+        if rtype == "attachment":
+            att = record.get("attachment")
+            if isinstance(att, dict) and str(att.get("type", "")).startswith("hook_"):
+                name = att.get("hookName") or att.get("hookEvent") or "hook"
+                code = att.get("exitCode")
+                ms = att.get("durationMs")
+                bits = []
+                if code is not None:
+                    bits.append(f"exit {code}")
+                if isinstance(ms, (int, float)):
+                    bits.append(f"{ms / 1000:.1f}s")
+                head = f"⚙ {name}" + (f" ({', '.join(bits)})" if bits else "")
+                body = []
+                for label, stream in (("", att.get("stdout")), ("stderr: ", att.get("stderr"))):
+                    text = (stream or "").strip()
+                    if text:
+                        body += [f"    {label}{ln}" for ln in text.splitlines()]
+                out.append(head + "\n" + ("\n".join(body) + "\n" if body else "") + "\n")
+            continue
+
         if rtype in SKIP_TYPES:
             continue
         # Subagent turns live in their own transcript files; keep the main log clean.
