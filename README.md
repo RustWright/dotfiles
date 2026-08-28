@@ -14,17 +14,36 @@ This symlinks commands, skills, and settings into `~/.claude/`.
 
 ```
 claude/
+├── CLAUDE.md               # Global instructions (session sync, memory, curiosities)
 ├── commands/
 │   ├── create-post.md      # Draft a new blog post for mylearnbase
 │   ├── new-project.md      # Scaffold a new project
 │   └── sync-dotfiles.md    # Pull latest config from this repo
 ├── skills/
-│   └── dx-new/             # Dioxus project scaffolding
+│   ├── config-conflict/    # Surface instruction-vs-config contradictions
+│   ├── dx-new/             # Dioxus project scaffolding
+│   └── session-audit/      # Close-out audit by failure mode
 └── settings.json           # Feature flags and hooks
 scripts/
-└── session-end.sh          # Stop hook: auto-commit if Claude didn't
+├── session-start.sh        # SessionStart: pull dotfiles, claude-state, repo, submodules
+├── session-compact.sh      # PreCompact: checkpoint (/compact never fires SessionEnd)
+├── session-end.sh          # SessionEnd: file log, commit + push, guarded pointer bump
+├── file-session-log.py     # Render the transcript into .log/ under a stable name
+├── render_session.py       # .jsonl -> readable .txt
+└── sync_pointers.py        # Deliberate submodule pointer integration (never automatic)
 setup.sh                    # Run this after cloning
 ```
+
+The three session hooks are the whole sync mechanism — see `claude/CLAUDE.md`
+§ Session Sync for what each one does and why. Nothing here should be run by hand
+except `sync_pointers.py`, which is deliberately manual.
+
+## Cross-device state
+
+Memory notes and saved plans live in a **separate private repo**, `claude-state`,
+which is `~/.claude` itself. It is not part of this repo and is not cloned by
+`setup.sh` — see `claude/CLAUDE.md` § Session Sync for the layout and the
+deny-by-default ignore rule.
 
 ## Adding new commands
 

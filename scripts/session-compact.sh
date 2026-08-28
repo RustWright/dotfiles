@@ -18,6 +18,20 @@ DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOOK_JSON="$(timeout 2 cat 2>/dev/null || true)"
 TRANSCRIPT="$(printf '%s' "$HOOK_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null || true)"
 
+# ── cross-device state: memory notes + saved plans (the claude-state repo) ────
+# Sits ABOVE the is-this-a-git-repo guard on purpose — memory belongs to the
+# session, not the work repo, so it must sync even when Claude was launched
+# outside a checkout. None of the submodule-pointer rules apply here: this repo
+# has no submodules, so `add -A` is safe. Non-fatal like every other sync step.
+STATE="$HOME/.claude"
+if [ -d "$STATE/.git" ]; then
+  git -C "$STATE" add -A 2>/dev/null || true
+  git -C "$STATE" diff --staged --quiet 2>/dev/null || {
+    git -C "$STATE" commit -q -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')" 2>/dev/null || true
+    git -C "$STATE" push -q 2>/dev/null || true
+  }
+fi
+
 git rev-parse --git-dir &>/dev/null || exit 0
 CWD="$(git rev-parse --show-toplevel)"
 
