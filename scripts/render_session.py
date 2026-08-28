@@ -20,7 +20,13 @@ from pathlib import Path
 # Cap per-stream hook output so one chatty hook can't drown the transcript.
 # Both caps are needed: a hook that returns JSON blows the CHAR cap on a single
 # enormous line, while a chatty shell hook blows the LINE cap instead.
-HOOK_MAX_LINES = 25
+# Truncation is TAIL-BIASED on purpose. Our hooks print routine chatter first
+# (git pull output) and the signal last — warnings, and the NEXT.md handoff,
+# which is printed last so it sits closest to the model's reading position. A
+# plain head-cap keeps the noise and discards exactly what matters, which is how
+# the first cross-device Phase 8 test lost its own evidence.
+HOOK_MAX_LINES = 80
+HOOK_HEAD_LINES = 20
 HOOK_MAX_CHARS = 300
 
 SKIP_TYPES = {
@@ -157,8 +163,13 @@ def render(jsonl_path):
                     # Some hooks (e.g. the output-style injector) return their whole
                     # prompt as JSON. Keep the evidence, drop the wall of text.
                     if len(lines) > HOOK_MAX_LINES:
+                        tail = HOOK_MAX_LINES - HOOK_HEAD_LINES
                         cut = len(lines) - HOOK_MAX_LINES
-                        lines = lines[:HOOK_MAX_LINES] + [f"... ({cut} more lines)"]
+                        lines = (
+                            lines[:HOOK_HEAD_LINES]
+                            + [f"... ({cut} lines elided) ..."]
+                            + lines[-tail:]
+                        )
                     body += [f"    {label}{ln}" for ln in lines]
                 # A hook that said nothing and exited 0 is not evidence of anything;
                 # rendering it would bury the ones that did speak.
