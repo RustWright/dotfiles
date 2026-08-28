@@ -17,6 +17,12 @@ import sys
 from pathlib import Path
 
 # Record types that carry no conversation content.
+# Cap per-stream hook output so one chatty hook can't drown the transcript.
+# Both caps are needed: a hook that returns JSON blows the CHAR cap on a single
+# enormous line, while a chatty shell hook blows the LINE cap instead.
+HOOK_MAX_LINES = 25
+HOOK_MAX_CHARS = 300
+
 SKIP_TYPES = {
     "attachment", "queue-operation", "mode", "permission-mode",
     "ai-title", "last-prompt", "file-history-snapshot",
@@ -139,13 +145,26 @@ def render(jsonl_path):
                     bits.append(f"exit {code}")
                 if isinstance(ms, (int, float)):
                     bits.append(f"{ms / 1000:.1f}s")
-                head = f"⚙ {name}" + (f" ({', '.join(bits)})" if bits else "")
                 body = []
                 for label, stream in (("", att.get("stdout")), ("stderr: ", att.get("stderr"))):
                     text = (stream or "").strip()
-                    if text:
-                        body += [f"    {label}{ln}" for ln in text.splitlines()]
-                out.append(head + "\n" + ("\n".join(body) + "\n" if body else "") + "\n")
+                    if not text:
+                        continue
+                    lines = [
+                        ln if len(ln) <= HOOK_MAX_CHARS else ln[:HOOK_MAX_CHARS] + " …[truncated]"
+                        for ln in text.splitlines()
+                    ]
+                    # Some hooks (e.g. the output-style injector) return their whole
+                    # prompt as JSON. Keep the evidence, drop the wall of text.
+                    if len(lines) > HOOK_MAX_LINES:
+                        cut = len(lines) - HOOK_MAX_LINES
+                        lines = lines[:HOOK_MAX_LINES] + [f"... ({cut} more lines)"]
+                    body += [f"    {label}{ln}" for ln in lines]
+                # A hook that said nothing and exited 0 is not evidence of anything;
+                # rendering it would bury the ones that did speak.
+                if body or code not in (0, None):
+                    head = f"⚙ {name}" + (f" ({', '.join(bits)})" if bits else "")
+                    out.append(head + "\n" + ("\n".join(body) + "\n" if body else "") + "\n")
             continue
 
         if rtype in SKIP_TYPES:
