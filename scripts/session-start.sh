@@ -22,7 +22,7 @@ main() {
   # Keep the workflow machinery itself current. ff-only never clobbers local
   # dotfiles edits; if the tree is dirty in a conflicting way it simply declines.
   DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-  git -C "$DOTFILES" pull --ff-only 2>/dev/null || true
+  git -C "$DOTFILES" pull --ff-only 2>/dev/null || echo "session-start: WARNING — ~/.dotfiles pull failed; workflow machinery may be stale on this device."
 
   # ── cross-device memory + plans (the claude-state repo) ─────────────────────
   # Deliberately ABOVE the is-this-a-git-repo guard below: memory belongs to the
@@ -30,7 +30,12 @@ main() {
   # somewhere that isn't a checkout.
   STATE="$HOME/.claude"
   if [ -d "$STATE/.git" ]; then
-    git -C "$STATE" pull --rebase --autostash 2>/dev/null || true
+    if ! git -C "$STATE" pull --rebase --autostash 2>/dev/null; then
+      # A conflicted rebase would otherwise leave the repo mid-operation, silently.
+      # Aborting restores the pre-pull state: local commits intact, nothing lost.
+      git -C "$STATE" rebase --abort 2>/dev/null || true
+      echo "session-start: WARNING — claude-state pull failed (likely a local commit conflicting with the remote). Rolled back. Memory may be STALE this session. Fix: git -C $STATE pull --rebase"
+    fi
 
     # Memory lives under a slug keyed on the path RELATIVE TO $HOME, because the
     # absolute path differs per device (/home/efe vs /home/me) while ~/... does
@@ -88,7 +93,10 @@ main() {
   CWD="$(git rev-parse --show-toplevel)"
 
   # Pull the current repo; autostash keeps any uncommitted work out of the way.
-  git -C "$CWD" pull --rebase --autostash 2>/dev/null || true
+  if ! git -C "$CWD" pull --rebase --autostash 2>/dev/null; then
+    git -C "$CWD" rebase --abort 2>/dev/null || true
+    echo "session-start: WARNING — pull failed in $CWD (likely an unpushed local commit conflicting with the remote). Rolled back to a clean state; you are working from STALE code. Fix by hand: git -C $CWD pull --rebase"
+  fi
 
   # Gently advance submodules: fetch + ff the clean ones, skip dirty ones.
   git -C "$CWD" submodule --quiet foreach '
