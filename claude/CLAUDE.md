@@ -62,6 +62,27 @@ Re-deriving obvious, already-agreed context wastes a session's opening; if a dec
 is genuinely unclear or looks contradicted by current state, ask — don't silently
 redo it. In short: **state is checked, decisions are inherited.**
 
+**`NEXT.md` is where the decisions half lives.** Every project keeps one at its root,
+and SessionStart **prints it into your context** — you do not have to go find it. It is
+short by contract (40 lines, enforced by the hook) and holds only the next action, the
+decisions in force with their rationale, what NOT to re-survey, and open threads.
+
+Two rules about it, and they pull in opposite directions on purpose:
+
+- **Trust it about decisions.** If `NEXT.md` says a choice is settled or names files as
+  not-worth-re-surveying, that is *permission to skip them* — take it. Re-reviewing
+  what a previous session already closed is the single most expensive way to open a
+  session, and it is the default behaviour this file exists to suppress.
+- **Never trust it about state.** It is not a snapshot and must never become one. Check
+  `git status` and read the current files regardless of what it says.
+
+If SessionStart prints **`NEXT.md is STALE`**, work landed after the handoff was last
+written: treat it as a lead, not the truth, and rewrite it before you finish. If it
+prints **`no NEXT.md`**, write one. **Writing `NEXT.md` is part of wrapping up** — the
+last thing you do before the session ends or compacts, rewritten wholesale rather than
+appended to. The history already lives in `project.md` and `logs/`; `NEXT.md` only ever
+describes *now*.
+
 ## Curiosity Capture
 
 While working on any project, watch for **curiosities** — concepts the user surfaces

@@ -107,6 +107,47 @@ main() {
       echo "session-start: skipping dirty submodule $sm_path (work in flight)"
     fi
   ' 2>/dev/null || true
+
+  # ── instant-resume handoff: NEXT.md ─────────────────────────────────────────
+  # PRINTED, not merely pointed at. SessionStart stdout is injected into the
+  # session's context, so this makes the handoff the first thing read rather than
+  # something the model must know to go looking for. A pointer alone was already
+  # tried and failed: a session opened at a repo root, asked "what's next", and
+  # went digging through logs/ — while the correct answer sat in a file that
+  # nothing surfaced. Discoverability, not mere presence, is the requirement.
+  #
+  # Printed LAST on purpose: closest to the model's reading position.
+  #
+  # NEXT.md carries DECISIONS + the next action. It is never a state snapshot —
+  # state is always re-verified live (see CLAUDE.md). Two canaries keep it honest,
+  # because a stale handoff is worse than none: it reads exactly like a fresh one.
+  NEXT="$CWD/NEXT.md"
+  if [ -f "$NEXT" ]; then
+    echo "───── NEXT.md — handoff for $(basename "$CWD"): inherit these decisions, verify state live ─────"
+    cat "$NEXT"
+    echo "───── end NEXT.md ─────"
+
+    # Staleness: count commits landed since NEXT.md was last written. Anchored on
+    # the commit SHA, not a timestamp window, so the boundary commit can't be
+    # double-counted. An untracked (brand-new) NEXT.md has no SHA and is fresh.
+    HSHA="$(git -C "$CWD" log -1 --format=%H -- NEXT.md 2>/dev/null)"
+    if [ -n "$HSHA" ]; then
+      BEHIND="$(git -C "$CWD" rev-list --count "$HSHA"..HEAD 2>/dev/null || echo 0)"
+      if [ "${BEHIND:-0}" -gt 0 ]; then
+        HT="$(git -C "$CWD" log -1 --format=%ct "$HSHA" 2>/dev/null || echo 0)"
+        RT="$(git -C "$CWD" log -1 --format=%ct 2>/dev/null || echo 0)"
+        echo "session-start: WARNING — NEXT.md is STALE: $BEHIND commit(s) landed after it was last written ($(( (RT - HT) / 86400 )) days ago). Treat it as a lead, not the truth; rewrite it at wrap-up."
+      fi
+    fi
+
+    # Size cap: enforce the discipline mechanically. Prose asking for brevity is
+    # the thing that failed before — a 161-line "handoff" that was really a
+    # context dump, and rotted unnoticed for 42 days.
+    LINES="$(grep -c '' "$NEXT" 2>/dev/null || echo 0)"
+    [ "${LINES:-0}" -gt 40 ] && echo "session-start: NOTE — NEXT.md is $LINES lines (cap 40). It is drifting into a state snapshot; trim it back to decisions + next action."
+  else
+    echo "session-start: no NEXT.md in $CWD — there is no handoff. Write one at wrap-up (see ~/.claude/CLAUDE.md, Starting a fresh session)."
+  fi
 }
 
 main "$@"

@@ -1,6 +1,6 @@
 # Create a new project
 
-Projects live at `/home/me/productive_learning/projects/`.
+Projects live at `~/productive_learning/projects/`.
 
 ## Phase 1: Gather info (you do this in the main conversation)
 
@@ -29,7 +29,7 @@ Use the **Task tool** with `subagent_type: "general-purpose"` to do the file cre
 
 ### Scaffolding spec (include this in the subagent prompt)
 
-**Base path:** `/home/me/productive_learning/projects/<PROJECT_NAME>/`
+**Base path:** `~/productive_learning/projects/<PROJECT_NAME>/`
 
 **Always create (both types):**
 - `.log/` — empty directory (create a `.gitkeep` file inside)
@@ -38,13 +38,34 @@ Use the **Task tool** with `subagent_type: "general-purpose"` to do the file cre
 **Do NOT copy `.mcp.json` or `mcp-servers/`** — the user will set those up manually per project if needed. The MCP config is sensitive and project-specific.
 
 **For full-process only, additionally create:**
-- `project.md` — copy `/home/me/productive_learning/setup_files/project_template.md`, then fill in:
+- `project.md` — copy `~/productive_learning/setup_files/project_template.md`, then fill in:
   - Replace the placeholder title/name with `PROJECT_NAME`
   - Replace the placeholder description with `PROJECT_DESCRIPTION`
   - Replace the placeholder date with today's date (YYYY-MM-DD)
-- `PROJECT_PROCESS.md` — copy from `/home/me/productive_learning/setup_files/PROJECT_PROCESS.md` verbatim
+- `PROJECT_PROCESS.md` — copy from `~/productive_learning/setup_files/PROJECT_PROCESS.md` verbatim
 - `architecture.md` — placeholder file: `# Architecture\n\n_To be filled in during Session 2._`
 - `tasks.md` — placeholder file: `# Tasks\n\n_To be filled in during Session 3._`
+- `NEXT.md` — the instant-resume handoff, seeded so the project is never without one.
+  SessionStart prints this file into context, so it is the first thing every future
+  session reads. Seed it as:
+
+  ```markdown
+  # NEXT — <PROJECT_NAME>
+
+  **Updated:** <today> · scaffolded, Session 1 not yet run
+
+  ## Next action
+  Run Session 1 (Initiation) — see `PROJECT_PROCESS.md`.
+
+  ## Decisions in force
+  _None yet. Decisions land here as they're settled, each with its one-line why._
+
+  ## Do NOT re-survey
+  _Nothing yet — the project is empty._
+
+  ## Open threads
+  _None yet._
+  ```
 
 ### CLAUDE.md template — full-process
 
@@ -61,12 +82,16 @@ parent-sync — is **automatic** via the session hooks. See `~/.claude/CLAUDE.md
 parent-sync); doing so fights the hooks.
 
 Project-specific session steps:
-- **Start:** Re-verify live state (`git status`, read what you'll touch), then read
-  `project.md` for current state and next session; confirm with the user before
-  proceeding. If resuming mid-session, read `tasks.md` and `architecture.md`. Inherit
-  decisions already agreed in prior sessions — don't re-derive settled context.
-- **End:** Update `project.md`'s session log and `tasks.md` (Session 4). The transcript
-  is rendered into `.log/` and synced to the parent automatically — no `/export` step.
+- **Start:** `NEXT.md` has already been printed into your context by SessionStart —
+  start from it. Trust it about **decisions**: if it says a choice is settled, or names
+  files as not-worth-re-surveying, skip them. Never trust it about **state** — re-verify
+  that live (`git status`, read what you'll touch). Then read `project.md` for the
+  session log, and `tasks.md` / `architecture.md` if resuming mid-session.
+- **End:** **Rewrite `NEXT.md` wholesale** — every sitting, not just at phase
+  boundaries. Max 40 lines; decisions and next action only, never a state snapshot.
+  Also update `project.md`'s session log and `tasks.md` (Session 4) when a phase wraps.
+  The transcript is rendered into `.log/` and synced to the parent automatically — no
+  `/export` step.
 
 ### Session Flow Reference
 ```
@@ -119,7 +144,7 @@ cargo run
 
 **Tell the subagent to:**
 1. Create all the files using the Write tool
-2. Create `/home/me/productive_learning/logs/<PROJECT_NAME>/` with a `.gitkeep` file inside (so the parent repo tracks a slot for this project's logs from the start)
+2. Create `~/productive_learning/logs/<PROJECT_NAME>/` with a `.gitkeep` file inside (so the parent repo tracks a slot for this project's logs from the start)
 3. Run `git init` inside the project directory using the Bash tool
 4. Run `git add -A && git commit -m "init: scaffold <PROJECT_NAME>"` inside the project directory
 5. Report back: list of all files created, git init status
@@ -131,14 +156,14 @@ After the subagent completes, ask the user:
 > "Do you want to push this to GitHub? If yes, create a repo at `github.com/RustWright/<PROJECT_NAME>` first (leave it empty — no README), then I'll add the remote and register it as a submodule."
 
 **If yes:**
-- Run: `git -C /home/me/productive_learning/projects/<PROJECT_NAME> remote add origin https://github.com/RustWright/<PROJECT_NAME>.git`
-- Run: `git -C /home/me/productive_learning/projects/<PROJECT_NAME> push -u origin main`
+- Run: `git -C ~/productive_learning/projects/<PROJECT_NAME> remote add origin https://github.com/RustWright/<PROJECT_NAME>.git`
+- Run: `git -C ~/productive_learning/projects/<PROJECT_NAME> push -u origin main`
 - Register as submodule in the parent repo:
   ```bash
-  # Add entry to /home/me/productive_learning/.gitmodules
+  # Add entry to ~/productive_learning/.gitmodules
   # Then stage and commit from productive_learning/
-  git -C /home/me/productive_learning add .gitmodules projects/<PROJECT_NAME>
-  git -C /home/me/productive_learning commit -m "add <PROJECT_NAME> as submodule"
+  git -C ~/productive_learning add .gitmodules projects/<PROJECT_NAME>
+  git -C ~/productive_learning commit -m "add <PROJECT_NAME> as submodule"
   ```
 
 **If no:** Leave as local git repo. Remind user they can register it as a submodule later with `/new-project` or manually.
