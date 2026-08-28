@@ -132,7 +132,11 @@ main() {
     # double-counted. An untracked (brand-new) NEXT.md has no SHA and is fresh.
     HSHA="$(git -C "$CWD" log -1 --format=%H -- NEXT.md 2>/dev/null)"
     if [ -n "$HSHA" ]; then
-      BEHIND="$(git -C "$CWD" rev-list --count "$HSHA"..HEAD 2>/dev/null || echo 0)"
+      # Exclude the hooks' own "auto:" checkpoints. They land on EVERY session end
+      # and compact, so counting them would report "STALE: 1" every single time —
+      # a warning that fires unconditionally is one you stop reading within a week,
+      # which is the same way the --since boundary bug would have killed it.
+      BEHIND="$(git -C "$CWD" rev-list --count --invert-grep --grep='^auto:' "$HSHA"..HEAD 2>/dev/null || echo 0)"
       if [ "${BEHIND:-0}" -gt 0 ]; then
         HT="$(git -C "$CWD" log -1 --format=%ct "$HSHA" 2>/dev/null || echo 0)"
         RT="$(git -C "$CWD" log -1 --format=%ct 2>/dev/null || echo 0)"
