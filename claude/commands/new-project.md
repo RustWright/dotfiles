@@ -14,7 +14,7 @@ Parse `$ARGUMENTS` as follows:
 **If name not provided:** Ask for it.
 
 **If type not provided:** Ask the user:
-> "Simple project (scripts, experiments, tools — minimal structure) or full-process (5-session PROJECT_PROCESS.md workflow with tracking files)?"
+> "Simple project (scripts, experiments, tools — minimal structure) or full-process (6-session PROJECT_PROCESS.md workflow with tracking files)?"
 
 **For full-process only:** Ask for a one-line description of the project (used to pre-fill `project.md`).
 
@@ -42,7 +42,6 @@ Use the **Task tool** with `subagent_type: "general-purpose"` to do the file cre
   - Replace the placeholder title/name with `PROJECT_NAME`
   - Replace the placeholder description with `PROJECT_DESCRIPTION`
   - Replace the placeholder date with today's date (YYYY-MM-DD)
-- `PROJECT_PROCESS.md` — copy from `~/productive_learning/setup_files/PROJECT_PROCESS.md` verbatim
 - `architecture.md` — placeholder file: `# Architecture\n\n_To be filled in during Session 2._`
 - `tasks.md` — placeholder file: `# Tasks\n\n_To be filled in during Session 3._`
 - `NEXT.md` — the instant-resume handoff, seeded so the project is never without one.
@@ -72,7 +71,7 @@ Use the **Task tool** with `subagent_type: "general-purpose"` to do the file cre
 ```markdown
 # Claude Code Instructions
 
-This project follows the structured process defined in `PROJECT_PROCESS.md`.
+This project follows the structured process defined in `../../setup_files/PROJECT_PROCESS.md` — the single canonical copy, in the `productive_learning` workspace. There is no per-project mirror; read it there. (Later mentions of `PROJECT_PROCESS.md § …` on this page mean that file.)
 
 ## Session Management
 
