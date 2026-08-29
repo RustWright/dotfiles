@@ -78,10 +78,43 @@ Two rules about it, and they pull in opposite directions on purpose:
 
 If SessionStart prints **`NEXT.md is STALE`**, work landed after the handoff was last
 written: treat it as a lead, not the truth, and rewrite it before you finish. If it
-prints **`no NEXT.md`**, write one. **Writing `NEXT.md` is part of wrapping up** — the
-last thing you do before the session ends or compacts, rewritten wholesale rather than
-appended to. The history already lives in `project.md` and `logs/`; `NEXT.md` only ever
-describes *now*.
+prints **`no NEXT.md`**, write one.
+
+**When to write it: at completion, not at the end.** Rewrite `NEXT.md` the moment the
+"Next action" it names is finished, abandoned, or redirected — *before* you report that
+work as done. Rewrite it again at wrap-up only if something changed since. It is always
+rewritten wholesale, never appended to; the history already lives in `project.md` and
+`logs/`, and `NEXT.md` only ever describes *now*.
+
+The end of a session is the one moment you are **not** guaranteed a turn. `SessionEnd`
+and `PreCompact` hooks commit files but never invoke the model, so a session that dies
+mid-stretch commits the *stale* handoff and the `STALE` canary only reports it one
+session later. Completion is a moment you are certainly present for. That is the whole
+reason the trigger moved.
+
+## Memory has two tiers — write to the right one
+
+- **Project tier** — auto-memory, keyed per working directory. Facts about *this*
+  project. Indexed in `MEMORY.md`, recalled lazily when relevant.
+- **Global tier** — `~/.claude/rules/`. Loaded into **every project on every device,
+  every session**. Behavioural directives that do not depend on which project you are
+  in: how the user wants to work, error classes to avoid, config doctrine.
+
+**Decide at the moment of writing.** Before saving a `feedback` or `user` note, ask:
+*does this depend on this project?* If not, write it as a rule instead of a note. This
+is where the tier is kept honest — sorting later is strictly more work than sorting now.
+
+**Promotion is net-negative by contract.** Promoting an existing note to a rule means
+deleting the source file *and* its `MEMORY.md` index line, and rewriting the content as
+a directive (no `**Why:**`/`**How to apply:**` scaffolding — rules are read as
+instructions, not recalled as notes). A promotion that leaves the note behind has made
+things worse.
+
+**Respect the budget: 12 files, 150 lines.** An oversized `MEMORY.md` merely truncates —
+the tail stops loading, which is lazy waste. An oversized rules tier is paid on every
+session in every project on both devices, forever. SessionStart warns on both; when it
+flags a project's index, that is the cue to run a promote-and-prune pass for that
+project, in the session that already has its context.
 
 ## Curiosity Capture
 

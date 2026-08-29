@@ -87,8 +87,10 @@ Project-specific session steps:
   files as not-worth-re-surveying, skip them. Never trust it about **state** — re-verify
   that live (`git status`, read what you'll touch). Then read `project.md` for the
   session log, and `tasks.md` / `architecture.md` if resuming mid-session.
-- **End:** **Rewrite `NEXT.md` wholesale** — every sitting, not just at phase
-  boundaries. Max 40 lines; decisions and next action only, never a state snapshot.
+- **On completing a stretch:** **Rewrite `NEXT.md` wholesale** — the moment the
+  next action it names is done, abandoned, or redirected, before reporting it
+  done. Not saved for session end: the hooks commit files but never invoke the
+  model, so a sitting that ends mid-stretch commits the stale handoff. Max 40 lines; decisions and next action only, never a state snapshot.
   Also update `project.md`'s session log and `tasks.md` (Session 4) when a phase wraps.
   The transcript is rendered into `.log/` and synced to the parent automatically — no
   `/export` step.

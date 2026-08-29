@@ -87,6 +87,36 @@ main() {
       mkdir -p "$TARGET"
       ln -s "../../state/memory/$SLUG" "$LINK"
     fi
+
+    # ── pressure canary: MEMORY.md against the real load limits ────────────────
+    # Claude Code loads only the first 200 lines / 25KB of MEMORY.md. Past that the
+    # tail is silently dropped — the index still LOOKS complete, so nothing reports
+    # it. (omni-me sat at 29.7KB before this canary existed.) This is the trigger
+    # for a promote-to-rules pass: it fires in a session that already has that
+    # project's context, instead of demanding one 159-note audit somewhere.
+    IDX="$TARGET/MEMORY.md"
+    if [ -f "$IDX" ]; then
+      IL="$(grep -c '' "$IDX" 2>/dev/null || echo 0)"
+      IB="$(wc -c < "$IDX" 2>/dev/null || echo 0)"
+      if [ "${IL:-0}" -gt 200 ] || [ "${IB:-0}" -gt 25600 ]; then
+        echo "session-start: WARNING — MEMORY.md for $SLUG is $IL lines / $IB bytes, PAST the 200-line / 25KB load cap. The tail is NOT loading this session. Promote general notes to ~/.claude/rules/ and prune the rest."
+      elif [ "${IL:-0}" -gt 160 ] || [ "${IB:-0}" -gt 20480 ]; then
+        echo "session-start: NOTE — MEMORY.md for $SLUG is $IL lines / $IB bytes, nearing the 200-line / 25KB load cap. Promote or prune before it starts dropping entries."
+      fi
+    fi
+
+    # ── budget canary: the global rules tier ───────────────────────────────────
+    # Deliberately tighter than the memory cap, because the failure is worse. An
+    # oversized MEMORY.md merely truncates — lazy waste. Rules load in EVERY
+    # project on EVERY device, so an oversized tier is paid on every single
+    # session forever. The cure must not become the disease.
+    if [ -d "$STATE/rules" ]; then
+      RC="$(find "$STATE/rules" -name '*.md' 2>/dev/null | wc -l)"
+      RL="$(cat "$STATE"/rules/*.md 2>/dev/null | grep -c '' || echo 0)"
+      if [ "${RC:-0}" -gt 10 ] || [ "${RL:-0}" -gt 120 ]; then
+        echo "session-start: NOTE — global rules tier is $RC files / $RL lines (budget 12 / 150). Every line here costs context in every session; merge or demote before adding more."
+      fi
+    fi
   fi
 
   git rev-parse --git-dir &>/dev/null || return 0
@@ -140,7 +170,7 @@ main() {
       if [ "${BEHIND:-0}" -gt 0 ]; then
         HT="$(git -C "$CWD" log -1 --format=%ct "$HSHA" 2>/dev/null || echo 0)"
         RT="$(git -C "$CWD" log -1 --format=%ct 2>/dev/null || echo 0)"
-        echo "session-start: WARNING — NEXT.md is STALE: $BEHIND commit(s) landed after it was last written ($(( (RT - HT) / 86400 )) days ago). Treat it as a lead, not the truth; rewrite it at wrap-up."
+        echo "session-start: WARNING — NEXT.md is STALE: $BEHIND commit(s) landed after it was last written ($(( (RT - HT) / 86400 )) days ago). Treat it as a lead, not the truth; rewrite it the moment the next action it names is done."
       fi
     fi
 
@@ -150,7 +180,7 @@ main() {
     LINES="$(grep -c '' "$NEXT" 2>/dev/null || echo 0)"
     [ "${LINES:-0}" -gt 40 ] && echo "session-start: NOTE — NEXT.md is $LINES lines (cap 40). It is drifting into a state snapshot; trim it back to decisions + next action."
   else
-    echo "session-start: no NEXT.md in $CWD — there is no handoff. Write one at wrap-up (see ~/.claude/CLAUDE.md, Starting a fresh session)."
+    echo "session-start: no NEXT.md in $CWD — there is no handoff. Write one as soon as you finish the first stretch of work (see ~/.claude/CLAUDE.md, Starting a fresh session)."
   fi
 }
 
