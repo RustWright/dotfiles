@@ -18,26 +18,37 @@ DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOOK_JSON="$(timeout 2 cat 2>/dev/null || true)"
 TRANSCRIPT="$(printf '%s' "$HOOK_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null || true)"
 
+# File the readable log-so-far. ORDERING IS LOAD-BEARING — see the long note in
+# session-end.sh: this is local and unrecoverable-if-skipped, so it must run
+# BEFORE any network I/O. Behind the claude-state push it silently lost six
+# session logs on 2026-08-30. The repo guard is DUPLICATED rather than moved, so
+# a session launched outside a checkout still falls through to the memory sync.
+# Capture-then-emit (not `| tee`) so a closed stdout cannot cost us the record;
+# surface the one-line result (filed/skipped) to the user, full detail in the log.
+CWD=""
+if git rev-parse --git-dir &>/dev/null; then
+  CWD="$(git rev-parse --show-toplevel)"
+  FILE_RESULT="$(python3 "$DOTFILES/file-session-log.py" --repo "$CWD" --transcript "$TRANSCRIPT" 2>&1)"
+  printf '%s\n' "$FILE_RESULT" >> "$DEBUG_LOG"
+  printf '%s\n' "$FILE_RESULT"
+fi
+
 # ── cross-device state: memory notes + saved plans (the claude-state repo) ────
-# Sits ABOVE the is-this-a-git-repo guard on purpose — memory belongs to the
+# Runs regardless of whether we are in a checkout — memory belongs to the
 # session, not the work repo, so it must sync even when Claude was launched
-# outside a checkout. None of the submodule-pointer rules apply here: this repo
-# has no submodules, so `add -A` is safe. Non-fatal like every other sync step.
+# outside one. None of the submodule-pointer rules apply here: this repo has no
+# submodules, so `add -A` is safe. Non-fatal like every other sync step.
+# Every push is BOUNDED so a hang costs seconds, never the rest of the script.
 STATE="$HOME/.claude"
 if [ -d "$STATE/.git" ]; then
   git -C "$STATE" add -A 2>/dev/null || true
   git -C "$STATE" diff --staged --quiet 2>/dev/null || {
     git -C "$STATE" commit -q -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')" 2>/dev/null || true
-    git -C "$STATE" push -q 2>/dev/null || echo "WARNING: claude-state push FAILED — memory is committed locally but NOT synced. Fix: git -C $STATE pull --rebase && git -C $STATE push"
+    timeout 30 git -C "$STATE" push -q 2>/dev/null || echo "WARNING: claude-state push FAILED or timed out — memory is committed locally but NOT synced. Fix: git -C $STATE pull --rebase && git -C $STATE push"
   }
 fi
 
-git rev-parse --git-dir &>/dev/null || exit 0
-CWD="$(git rev-parse --show-toplevel)"
-
-# File the readable log-so-far; surface the one-line result (filed/skipped) to the
-# user, keeping full detail (incl. stderr) in the debug log.
-python3 "$DOTFILES/file-session-log.py" --repo "$CWD" --transcript "$TRANSCRIPT" 2>>"$DEBUG_LOG" | tee -a "$DEBUG_LOG"
+[ -z "$CWD" ] && exit 0
 
 # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
 # tracked parent dirs.
@@ -55,7 +66,7 @@ done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null 
 
 if ! git -C "$CWD" diff --staged --quiet; then
   git -C "$CWD" commit -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')"
-  git -C "$CWD" push 2>/dev/null || echo "WARNING: push FAILED in $CWD — work is committed locally but NOT on the remote (usually the branch moved on another device). Fix: git -C $CWD pull --rebase && git -C $CWD push"
+  timeout 30 git -C "$CWD" push 2>/dev/null || echo "WARNING: push FAILED or timed out in $CWD — work is committed locally but NOT on the remote (usually the branch moved on another device). Fix: git -C $CWD pull --rebase && git -C $CWD push"
 fi
 
 # Submodule session: copy logs + curiosities to the parent (pointer bump stays
@@ -67,6 +78,6 @@ if [ -n "$PARENT" ]; then
   git -C "$PARENT" add -- "logs/$PROJECT" "curiosities/$PROJECT" 2>/dev/null || true
   git -C "$PARENT" diff --staged --quiet || {
     git -C "$PARENT" commit -m "auto: compact log sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
-    git -C "$PARENT" push 2>/dev/null || echo "WARNING: parent push FAILED in $PARENT — pointer/log commit is local only. Fix: git -C $PARENT pull --rebase && git -C $PARENT push"
+    timeout 30 git -C "$PARENT" push 2>/dev/null || echo "WARNING: parent push FAILED or timed out in $PARENT — pointer/log commit is local only. Fix: git -C $PARENT pull --rebase && git -C $PARENT push"
   }
 fi
