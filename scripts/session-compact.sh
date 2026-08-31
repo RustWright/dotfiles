@@ -7,6 +7,12 @@
 # the readable log-so-far and commits+pushes work in the current repo, EXCLUDING
 # submodule pointer bumps (same safety invariant as session-end.sh — a pointer
 # bump is an integration action, never a side effect of a checkpoint).
+#
+# Shares session-end.sh's rule 3 — EVERY LOCAL STEP BEFORE EVERY NETWORK STEP —
+# and shared the same defect until 2026-08-31: the mirror and the repo commit sat
+# below the claude-state push, so a hook killed in that push checkpointed nothing.
+# This path is *more* exposed than SessionEnd, not less: a compact is where big
+# multi-sitting work and device handoffs get their only durable snapshot.
 
 DEBUG_LOG="/tmp/claude-session-compact-debug.log"
 echo "=== PreCompact: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
@@ -33,6 +39,32 @@ if git rev-parse --git-dir &>/dev/null; then
   printf '%s\n' "$FILE_RESULT"
 fi
 
+# ── LOCAL: mirror logs and COMMIT the checkpoint, before any network I/O ──────
+# Rule 3 (see the header). The CWD guard is DUPLICATED as an `if` rather than
+# moved up as an early exit, so a session launched outside a checkout still
+# reaches the memory sync below.
+COMMITTED=0
+if [ -n "$CWD" ]; then
+  # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
+  # tracked parent dirs.
+  PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
+  if [ -z "$PARENT" ]; then
+    [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
+    [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
+  fi
+
+  # Stage WIP, then unstage every submodule path before committing.
+  git -C "$CWD" add -A
+  while IFS= read -r sub; do
+    [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
+  done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
+
+  if ! git -C "$CWD" diff --staged --quiet; then
+    git -C "$CWD" commit -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')"
+    COMMITTED=1
+  fi
+fi
+
 # ── cross-device state: memory notes + saved plans (the claude-state repo) ────
 # Runs regardless of whether we are in a checkout — memory belongs to the
 # session, not the work repo, so it must sync even when Claude was launched
@@ -50,22 +82,11 @@ fi
 
 [ -z "$CWD" ] && exit 0
 
-# Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
-# tracked parent dirs.
-PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
-if [ -z "$PARENT" ]; then
-  [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
-  [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
-fi
-
-# Commit WIP in the current repo, excluding submodule pointer changes, and push.
-git -C "$CWD" add -A
-while IFS= read -r sub; do
-  [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
-done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
-
-if ! git -C "$CWD" diff --staged --quiet; then
-  git -C "$CWD" commit -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')"
+# ── NETWORK: push the checkpoint committed above ──────────────────────────────
+# Split from its commit on purpose (rule 3). Also pushes when an EARLIER run
+# committed but died before pushing — the state a killed hook leaves behind.
+AHEAD="$(git -C "$CWD" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
+if [ "$COMMITTED" = 1 ] || [ "${AHEAD:-0}" -gt 0 ]; then
   timeout 30 git -C "$CWD" push 2>/dev/null || echo "WARNING: push FAILED or timed out in $CWD — work is committed locally but NOT on the remote (usually the branch moved on another device). Fix: git -C $CWD pull --rebase && git -C $CWD push"
 fi
 

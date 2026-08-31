@@ -3,7 +3,7 @@
 # (never sweeping submodule pointers), and — inside a submodule — sync logs to the
 # parent and record the submodule pointer ONLY if it is already pushed.
 #
-# Two independent safety rules, both learned the hard way:
+# Three independent safety rules, all learned the hard way:
 #   1. A root/parent session must NOT auto-commit submodule pointer bumps. A bare
 #      `git add -A` in the parent stages every dirty gitlink, recording a pointer
 #      to an unpushed (or unrelated, in-flight) submodule commit — a dangling
@@ -12,6 +12,18 @@
 #   2. A submodule session MAY advance the parent's pointer, but only when that
 #      submodule HEAD is already on its remote (else the same dangling gitlink).
 #      That guarded bump is a deliberate integration; the sweep in rule 1 is not.
+#   3. EVERY LOCAL STEP RUNS BEFORE EVERY NETWORK STEP. This hook is killed when
+#      it outlives the CLI's shutdown grace, and it always dies inside a push —
+#      so anything sequenced after a push is a coin flip. Local work is cheap and
+#      unrecoverable-if-skipped; a push is expensive and always retryable next
+#      session. On 2026-08-30 that cost six session logs, and the fix hoisted only
+#      the log filing. On 2026-08-31 the same kill landed one step lower: the hook
+#      filed its log, entered the claude-state push, and never reached the repo
+#      commit — leaving NEXT.md, the handoff artifact, written but UNCOMMITTED and
+#      therefore absent on every other device. Hence the rule is now the whole
+#      script's shape, not one hoisted line: mirror and COMMIT locally up front,
+#      push afterwards. The commit/push split below is deliberate; do not re-pair
+#      them.
 
 DEBUG_LOG="/tmp/claude-session-end-debug.log"
 echo "=== SessionEnd: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
@@ -41,6 +53,38 @@ if git rev-parse --git-dir &>/dev/null; then
   printf '%s\n' "$FILE_RESULT"
 fi
 
+# ── LOCAL: mirror logs and COMMIT the current repo, before any network I/O ────
+# Rule 3. This whole block used to sit *below* the claude-state push; on
+# 2026-08-31 the hook died in that push and never got here, so the session's
+# NEXT.md was written but never committed. Nothing in here touches the network,
+# so nothing in here can be lost to a killed push.
+# The CWD guard is DUPLICATED as an `if` rather than moved up as an early exit —
+# same reason the log-filing block above duplicates it: a session launched
+# outside a checkout has no repo to commit, but must still reach the memory sync.
+COMMITTED=0
+if [ -n "$CWD" ]; then
+  PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
+
+  # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
+  # tracked parent dirs (same convention the manual protocol used — these dirs are
+  # parent-synced, never committed inside the project).
+  if [ -z "$PARENT" ]; then
+    [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
+    [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
+  fi
+
+  # Stage work, then unstage every submodule path before committing (rule 1).
+  git -C "$CWD" add -A
+  while IFS= read -r sub; do
+    [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
+  done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
+
+  if ! git -C "$CWD" diff --staged --quiet; then
+    git -C "$CWD" commit -m "auto: session end $(date '+%Y-%m-%d %H:%M')"
+    COMMITTED=1
+  fi
+fi
+
 # ── cross-device state: memory notes + saved plans (the claude-state repo) ────
 # Runs regardless of whether we are in a checkout — memory belongs to the
 # session, not the work repo, so it must sync even when Claude was launched
@@ -59,24 +103,14 @@ fi
 
 [ -z "$CWD" ] && exit 0
 
-PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
-
-# Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
-# tracked parent dirs (same convention the manual protocol used — these dirs are
-# parent-synced, never committed inside the project).
-if [ -z "$PARENT" ]; then
-  [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
-  [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
-fi
-
-# ── commit work in the current repo, EXCLUDING submodule pointer bumps (rule 1)
-git -C "$CWD" add -A
-while IFS= read -r sub; do
-  [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
-done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
-
-if ! git -C "$CWD" diff --staged --quiet; then
-  git -C "$CWD" commit -m "auto: session end $(date '+%Y-%m-%d %H:%M')"
+# ── NETWORK: push the commit made above ───────────────────────────────────────
+# Split from its commit on purpose (rule 3) — losing this push costs a retry next
+# session; losing the commit costs the work. Also pushes when an EARLIER run
+# committed but died before pushing, which is exactly the state a killed hook
+# leaves behind. Must stay AHEAD of the pointer bump below, which reads the
+# remote-tracking refs that only a successful push updates.
+AHEAD="$(git -C "$CWD" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
+if [ "$COMMITTED" = 1 ] || [ "${AHEAD:-0}" -gt 0 ]; then
   timeout 30 git -C "$CWD" push 2>/dev/null || echo "WARNING: push FAILED or timed out in $CWD — work is committed locally but NOT on the remote (usually the branch moved on another device). Fix: git -C $CWD pull --rebase && git -C $CWD push"
 fi
 
