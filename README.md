@@ -31,6 +31,8 @@ scripts/
 ├── file-session-log.py     # Render the transcript into .log/ under a stable name
 ├── render_session.py       # .jsonl -> readable .txt
 └── sync_pointers.py        # Deliberate submodule pointer integration (never automatic)
+git/
+└── ignore                  # Global gitignore -> ~/.config/git/ignore (every repo, this device)
 setup.sh                    # Run this after cloning
 ```
 

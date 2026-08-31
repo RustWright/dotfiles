@@ -1,0 +1,15 @@
+# Global gitignore — applies to EVERY repo on a device that symlinks this file.
+# Linked to ~/.config/git/ignore by setup.sh (git's default user-level ignore path;
+# core.excludesfile is deliberately left unset so the default applies).
+#
+# Lives here, in the synced dotfiles, because an ignore rule that exists on only one
+# machine is a coincidence, not a rule — a new device silently starts without it and
+# commits the very files this is meant to exclude.
+
+# Claude Code writes per-device permission approvals here. They are machine-specific
+# by design (see ~/.claude/rules/claude-config.md), so they must never be committed.
+# NOTE: gitignore only affects UNTRACKED files. If one of these is already tracked in
+# a repo, this line does nothing there — untrack it first:
+#   git rm --cached .claude/settings.local.json
+# and add the path to that repo's own .gitignore so the fix survives on every device.
+**/.claude/settings.local.json
