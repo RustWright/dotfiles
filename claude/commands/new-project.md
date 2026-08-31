@@ -44,6 +44,17 @@ Use the **Task tool** with `subagent_type: "general-purpose"` to do the file cre
   - Replace the placeholder date with today's date (YYYY-MM-DD)
 - `architecture.md` — placeholder file: `# Architecture\n\n_To be filled in during Session 2._`
 - `tasks.md` — placeholder file: `# Tasks\n\n_To be filled in during Session 3._`
+- `.omni/tasks.toml` — the distilled task index the omni-me hub reads. Seed it with the
+  header only, no tasks; Session 3 fills it alongside `tasks.md`. Schema and rules:
+  `../../setup_files/TASK_HUB_CONTRACT.md`.
+
+  ```toml
+  schema  = 1
+  project = "PROJECT_NAME"
+  cycle   = 1
+  updated = TODAY
+  ```
+
 - `NEXT.md` — the instant-resume handoff, seeded so the project is never without one.
   SessionStart prints this file into context, so it is the first thing every future
   session reads. Seed it as:
@@ -118,6 +129,8 @@ Subsequent:      3 → 4 → 5 (repeat)
 - `project.md` — Persistent tracker, decision summaries, session log
 - `architecture.md` — Technical decisions with rationale (created Session 2)
 - `tasks.md` — Current cycle's task list (created Session 3, reset each cycle)
+- `.omni/tasks.toml` — Distilled task index for the omni-me hub; updated at the same
+  phase boundary as `tasks.md`, never reset (see `TASK_HUB_CONTRACT.md`)
 - `.log/` — Raw conversation exports
 ```
 
