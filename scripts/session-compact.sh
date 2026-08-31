@@ -63,6 +63,18 @@ if [ -n "$CWD" ]; then
     git -C "$CWD" commit -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')"
     COMMITTED=1
   fi
+
+  # Visibility, NOT automation — see the long note in session-end.sh. A parent
+  # session never commits a submodule's own modified files, so that work is
+  # stranded on this device unless someone commits it from inside the submodule.
+  if [ -z "$PARENT" ]; then
+    while IFS= read -r sub; do
+      [ -n "$sub" ] || continue
+      [ -e "$CWD/$sub/.git" ] || continue
+      [ -n "$(git -C "$CWD/$sub" status --porcelain 2>/dev/null)" ] || continue
+      printf 'NOTE: %s has uncommitted work — a parent session never commits it, so it will not reach your other device. Commit from inside %s, or let a session running there do it.\n' "$sub" "$sub" | tee -a "$DEBUG_LOG"
+    done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
+  fi
 fi
 
 # ── cross-device state: memory notes + saved plans (the claude-state repo) ────

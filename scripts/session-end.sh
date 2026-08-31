@@ -83,6 +83,26 @@ if [ -n "$CWD" ]; then
     git -C "$CWD" commit -m "auto: session end $(date '+%Y-%m-%d %H:%M')"
     COMMITTED=1
   fi
+
+  # ── visibility, NOT automation: name the work this session will not commit ──
+  # Git treats a submodule as an opaque gitlink, so the `add -A` above stages only
+  # its POINTER (which rule 1 then unstages) — a submodule's own modified files are
+  # never touched by a parent session. Work edited under projects/<x>/ from a root
+  # session is therefore silently stranded on this device: the session ends
+  # "successfully" and the other device never sees it.
+  # Deliberately a NOTE and not a commit. Committing here would sweep another
+  # repo's in-flight work as a side effect — the exact thing rules 1 and 2 exist to
+  # prevent — and a concurrent session working in that submodule would have its
+  # half-finished staging committed out from under it (observed live 2026-08-31).
+  # The human decides; the hook only makes the boundary visible.
+  if [ -z "$PARENT" ]; then
+    while IFS= read -r sub; do
+      [ -n "$sub" ] || continue
+      [ -e "$CWD/$sub/.git" ] || continue
+      [ -n "$(git -C "$CWD/$sub" status --porcelain 2>/dev/null)" ] || continue
+      printf 'NOTE: %s has uncommitted work — a parent session never commits it, so it will not reach your other device. Commit from inside %s, or let a session running there do it.\n' "$sub" "$sub" | tee -a "$DEBUG_LOG"
+    done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
+  fi
 fi
 
 # ── cross-device state: memory notes + saved plans (the claude-state repo) ────
