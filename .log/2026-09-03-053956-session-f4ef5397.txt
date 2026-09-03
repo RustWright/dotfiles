@@ -1,0 +1,1514 @@
+ ▐▛███▜▌   Claude Code v2.1.236
+▝▜█████▛▘  ~/productive_learning
+  ▘▘ ▝▝    branch: main
+
+⚙ SessionStart:startup (exit 0, 8.2s)
+    Already up to date.
+    Already up to date.
+    session-start: NOTE — global rules tier is 8 files / 142 lines (budget 12 / 150). Every line here costs context in every session; merge or demote before adding more.
+    Current branch main is up to date.
+    Already up to date.
+    session-start: skipping dirty submodule projects/mylearnbase (work in flight)
+    Already up to date.
+    Already up to date.
+    Already up to date.
+    Already up to date.
+    Updating 78cbec4..67187e8
+    Fast-forward
+     scripts/publish_export.py | 288 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+     1 file changed, 288 insertions(+)
+     create mode 100755 scripts/publish_export.py
+    ───── NEXT.md — handoff for productive_learning: inherit these decisions, verify state live ─────
+    # NEXT — productive_learning (workspace root)
+    
+    **Updated:** 2026-09-02 · **on device 2** (`surface`, `$HOME=/home/me`; user relocating)
+    
+    ## Next action
+    1. **Phase 5** (cost/model) — the only unshelved phase left, exploratory, blocks nothing.
+       Scope is *delegated/subagent* work only; Opus stays the main-session default.
+    2. **Auto-push** — still needs a user decision; it gates the `.omni/tasks.toml` staleness
+       canary, which is the natural follow-on to Phase 9 and deliberately deferred behind it.
+    3. `~/life` exists now and has its own `NEXT.md` — personal-life work happens there,
+       not here.
+    
+    ## Decisions in force
+    - **Phases 0/1/2/3/4/6/7/8 + decision 8 are DONE. Do not reopen them.**
+    - **🅿️ Phase 9 SHELVED** — resumes only when omni-me builds the app half. Contract at
+      `setup_files/TASK_HUB_CONTRACT.md`; `tasks.md` is never parsed; indexes are TRACKED;
+      **reusing a task `id` is the only irreversible mistake.**
+    - **Hooks partition ALL local work before ANY network I/O** (dotfiles `0953f54`). **Never
+      re-pair commit and push** — that split IS the fix.
+    - **A parent session NEVER auto-commits a submodule.** Editing submodule files from a root
+      session strands them on that device; the hook prints a `NOTE:` naming them. The fix is
+      manual and intentional: commit + push *inside* the submodule, then bump the pointer.
+    - **Config that must exist on every device belongs in `~/.dotfiles` + `setup.sh`**, never
+      as a hand-made file under `~/.config`. `~/.config/git/ignore` is now symlinked from
+      dotfiles on both devices.
+    - **`PROJECT_PROCESS.md` / `TASK_HUB_CONTRACT.md`: ONE copy** at `setup_files/`. Never mirror.
+    - **Personal-life projects live in the private `RustWright/life` repo**, not here — this
+      workspace holds public submodules and the cost of a mistake is higher.
+    
+    ## Do NOT re-survey
+    Phases 0/1/2/3/4/6/7/8/9, decision 8, the five `tasks.md` files, `~/.dotfiles/*`, and the
+    whole `~/life` migration — all verified live this session, not merely read.
+    
+    ## Open threads
+    - **A cross-device runbook is a hypothesis, not an instruction.** Phase 6's, written on
+      device 1, had five errors — one would have published private files to a public repo.
+      Phase 4 was corrected the same way. Verify against live state before any irreversible step.
+    - **Memory slugs derive from `$PWD`** relative to `$HOME`; moving a directory silently
+      orphans its notes. Rename namespaces first, in the same sitting as the move.
+    ───── end NEXT.md ─────
+
+❯ I've run a session in life and everything works fine, you can see its log if you check the directory to see what happened, I'm concerned that there is an issue with the push side of the scripts because I ran git status after the life session ended and it said the local repo was 1 commit ahead of the remote, so I had to push manually
+
+● I'll investigate the `~/life` session logs and the hook scripts to find why the push didn't happen.
+
+● Bash(ls -la /home/me/life/ 2>&1 | head -40; echo "--- .log ---"; ls -la /home/me/life/.log/ 2>&1 | head -20)
+● Bash(cd /home/me/life && git status && echo "--- log ---" && git log --oneline -8 && echo "--- remote ---" && git remote -v && git rev-parse HEAD @{u} 2>&1)
+● Bash(ls -la /home/me/.dotfiles/scripts/)
+  ⎿  total 56
+     drwxrwxr-x 10 me me 4096 Sep  3 05:38 .
+     drwxr-x--- 45 me me 4096 Sep  3 05:40 ..
+     drwxrwxr-x  3 me me 4096 Sep  3 05:16 archive
+     drwxrwxr-x 10 me me 4096 Sep  2 18:25 citizenship_research
+     -rw-rw-r--  1 me me 2565 Sep  3 05:29 CLAUDE.md
+     drwxrwxr-x  2 me me 4096 Sep  2 18:28 .curiosities
+     drwxrwxr-x  3 me me 4096 Sep  3 05:38 curiosities
+     drwxrwxr-x  8 me me 4096 Sep  3 05:38 .git
+     -rw-rw-r--  1 me me  885 Sep  2 18:22 .gitignore
+     -rw-rw-r--  1 me me  289 Sep  2 18:21 .gitmodules
+     drwxrwxr-x  2 me me 4096 Sep  3 05:38 .log
+     drwxrwxr-x  3 me me 4096 Sep  3 05:38 logs
+     drwxrwxr-x 14 me me 4096 Sep  3 05:36 masters_planning
+     -rw-rw-r--  1 me me 2405 Sep  3 05:37 NEXT.md
+     --- .log ---
+     total 168
+     drwxrwxr-x  2 me me   4096 Sep  3 05:38 .
+     drwxrwxr-x 10 me me   4096 Sep  3 05:38 ..
+     -rw-rw-r--  1 me me 162301 Sep  3 05:38 2026-09-03-034332-session-a5c0a79a.txt
+
+  ⎿  On branch main
+     Your branch is up to date with 'origin/main'.
+     
+     nothing to commit, working tree clean
+     --- log ---
+     897faf0 auto: session end 2026-09-03 05:38
+     2bb000c Prune chronicle from CLAUDE.md
+     29f2922 sync: bump submodule pointers
+     66c9a3f Archive toronto itinerary as 2026-03
+     995d2d3 sync: bump submodule pointers
+     bf1f278 Docs: allowlist publishing tool
+     e6eb857 Health check: handoffs, stale path
+     dae92b2 sync: bump submodule pointers
+     --- remote ---
+     origin	https://github.com/RustWright/life.git (fetch)
+     origin	https://github.com/RustWright/life.git (push)
+     897faf074189eef2084d2a16fc3ffe5ac866a249
+     897faf074189eef2084d2a16fc3ffe5ac866a249
+     Shell cwd was reset to /home/me/productive_learning
+
+  ⎿  total 80
+     drwxrwxr-x 3 me me  4096 Sep  3 05:04 .
+     drwxrwxr-x 6 me me  4096 Sep  2 17:34 ..
+     -rwxrwxr-x 1 me me  6397 Aug 25 02:11 file-session-log.py
+     -rwxrwxr-x 1 me me 12194 Sep  3 05:04 publish_export.py
+     drwxrwxr-x 2 me me  4096 Sep  3 05:05 __pycache__
+     -rwxrwxr-x 1 me me 10044 Sep  2 17:34 render_session.py
+     -rwxrwxr-x 1 me me  6934 Sep  2 17:34 session-compact.sh
+     -rwxrwxr-x 1 me me  9905 Sep  2 17:34 session-end.sh
+     -rwxrwxr-x 1 me me 11685 Sep  2 17:34 session-start.sh
+     -rwxrwxr-x 1 me me  2811 Aug 24 12:05 sync_pointers.py
+
+● Repo is clean now (user pushed manually). Let me read the hook script and its debug log.
+
+● Read(/home/me/.dotfiles/scripts/session-end.sh)
+  ⎿  1	#!/bin/bash
+     2	# SessionEnd hook: file the readable session log, commit work in the current repo
+     3	# (never sweeping submodule pointers), and — inside a submodule — sync logs to the
+     4	# parent and record the submodule pointer ONLY if it is already pushed.
+     5	#
+     6	# Three independent safety rules, all learned the hard way:
+     7	#   1. A root/parent session must NOT auto-commit submodule pointer bumps. A bare
+     8	#      `git add -A` in the parent stages every dirty gitlink, recording a pointer
+     9	#      to an unpushed (or unrelated, in-flight) submodule commit — a dangling
+     10	#      gitlink that breaks fresh clones and `submodule update`. So we stage work
+     11	#      but then unstage every submodule path before committing.
+     12	#   2. A submodule session MAY advance the parent's pointer, but only when that
+     13	#      submodule HEAD is already on its remote (else the same dangling gitlink).
+     14	#      That guarded bump is a deliberate integration; the sweep in rule 1 is not.
+     15	#   3. EVERY LOCAL STEP RUNS BEFORE EVERY NETWORK STEP. This hook is killed when
+     16	#      it outlives the CLI's shutdown grace, and it always dies inside a push —
+     17	#      so anything sequenced after a push is a coin flip
+          … [8,454 chars elided] …
+     )"
+     149	if [ -n "$(git -C "$CWD" branch -r --contains "$SUB_HEAD" 2>/dev/null)" ]; then
+     150	  git -C "$PARENT" add -- "$CWD"
+     151	else
+     152	  echo "WARNING: $PROJECT HEAD $SUB_HEAD not on remote; pointer NOT recorded" | tee -a "$DEBUG_LOG"
+     153	fi
+     154	
+     155	if ! git -C "$PARENT" diff --staged --quiet; then
+     156	  git -C "$PARENT" commit -m "auto: sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
+     157	  timeout 30 git -C "$PARENT" push 2>/dev/null || echo "WARNING: parent push FAILED or timed out in $PARENT — pointer/log commit is local only. Fix: git -C $PARENT pull --rebase && git -C $PARENT push"
+     158	fi
+     159
+
+● Bash(ls -la /home/me/.claude/ 2>/dev/null | head -40; echo "=== debug logs ==="; find /home/me/.claude -maxdepth 2 -name "*.log" -newermt "2026-09-02" 2>/dev/null | head -20)
+  ⎿  total 1768
+     drwx------ 23 me me    4096 Sep  3 05:41 .
+     drwxr-x--- 45 me me    4096 Sep  3 05:40 ..
+     drwx------  2 me me    4096 Jan 31  2026 agents
+     drwxrwxr-x  2 me me    4096 Sep  3 05:40 backups
+     drwxrwxr-x  2 me me    4096 Sep  2 17:34 cache
+     lrwxrwxrwx  1 me me      35 Sep  2 18:19 CLAUDE.md -> /home/me/.dotfiles/claude/CLAUDE.md
+     drwxrwxr-x  2 me me    4096 Sep  2 18:19 commands
+     -rw-------  1 me me     504 Sep  3 03:41 .credentials.json
+     drwx------  3 me me    4096 Sep  2 17:45 daemon
+     -rw-rw-r--  1 me me     450 Jul 31 20:47 daemon.lock
+     -rw-rw-r--  1 me me     115 Jul 31 20:47 daemon.status.json
+     drwx------  2 me me    4096 Aug 23 16:44 debug
+     drwx------ 15 me me    4096 Sep  3 04:20 file-history
+     drwxrwxr-x  8 me me    4096 Sep  3 05:39 .git
+     -rw-rw-r--  1 me me    1386 Sep  2 17:34 .gitignore
+     -rw-rw-r--  1 me me 1643597 Sep  3 05:41 history.jsonl
+     drwxrwxr-x  3 me me    4096 Jul 31 20:48 jobs
+     -rw-rw-r--  1 me me      24 Sep  3 04:15 .last-cleanup
+     -rw-rw-r--  1 me me     161 Aug 28 00:40 .last-update-result.json
+     drwxrwxr-x  2 me me    4096 Aug 18 05:47 paste-cache
+     drwxrwxr-x  2 me me    4096 Sep  3 03:54 plans
+     drwx------  5 me me    4096 Sep  3 05:39 plugins
+     drwx------ 13 me me    4096 Sep  3 04:15 projects
+     drwxrwxr-x  2 me me    4096 Sep  3 05:28 rules
+     drwxrwxr-x  3 me me   12288 Sep  3 05:41 security
+     -rw-rw-r--  1 me me     111 May 10 02:00 security_warnings_state_15ee4612-1d4d-4059-ac46-5da36fa76523.json
+     drwxrwxr-x 29 me me    4096 Sep  3 05:39 session-env
+     drwx------  2 me me    4096 Sep  3 05:39 sessions
+     lrwxrwxrwx  1 me me      39 Sep  2 18:19 settings.json -> /home/me/.dotfiles/claude/settings.json
+     drwxrwxr-x  2 me me    4096 Sep  3 05:41 shell-snapshots
+     drwxrwxr-x  3 me me    4096 Sep  2 18:19 skills
+     drwxrwxr-x  3 me me    4096 Aug 28 13:12 state
+     -rw-------  1 me me   26279 Jul 25 23:26 stats-cache.json
+     drwxrwxr-x  5 me me    4096 Sep  2 17:45 tasks
+     === debug logs ===
+
+● Bash(tail -60 /tmp/claude-session-end-debug.log 2>&1; echo "=== EXISTS? ==="; ls -la /tmp/claude-session-end-debug.log /tmp/claude-*.log 2>&1)
+● Bash(cd /home/me/life && git reflog --date=iso -12 2>&1; echo "=== reflog origin/main ==="; git reflog show origin/main --date=iso -12 2>&1)
+  ⎿  === SessionEnd hook fired: Sun 23 Aug 2026 03:54:11 PM CDT ===
+     PWD: /home/me/productive_learning/projects/img_gen
+     CLAUDE_WORKING_DIRECTORY: unset
+     === SessionEnd: Mon 24 Aug 2026 03:41:38 PM CDT PWD=/home/me/masters_planning ===
+     === SessionEnd: Thu 27 Aug 2026 05:24:38 AM CDT PWD=/home/me/masters_planning ===
+     === SessionEnd: Fri 28 Aug 2026 05:05:01 AM CDT PWD=/home/me/masters_planning ===
+     === SessionEnd: Fri 28 Aug 2026 11:04:27 AM CDT PWD=/home/me/masters_planning ===
+     === SessionEnd: Fri 28 Aug 2026 12:24:22 PM CDT PWD=/home/me/productive_learning ===
+     filed /home/me/productive_learning/.log/2026-08-28-120627-session-54213dc4.txt (67,196 bytes)
+     === SessionEnd: Fri 28 Aug 2026 12:39:26 PM CDT PWD=/home/me/productive_learning ===
+     skipped: this exact transcript is already filed
+     === SessionEnd: Fri 28 Aug 2026 12:45:22 PM CDT PWD=/home/me/productive_learning ===
+     filed /home/me/productive_learning/.log/2026-08-28-124433-session-1b2df765.txt (12,396 bytes)
+     === SessionEnd: Fri 28 Aug 2026 05:17:37 PM CDT PWD=/home/me/productive_learning ===
+     filed /home/me/productive_learning/.log/2026-08-28-171724-session-0655486d.txt (230 bytes)
+     === SessionEnd: Fri 28 Aug 2026 05:26:21 PM CDT PWD=/home/m
+          … [628 chars elided] …
+     56,956 bytes)
+     NOTE: projects/mylearnbase has uncommitted work — a parent session never commits it, so it will not reach your other device. Commit from inside projects/mylearnbase, or let a session running there do it.
+     === SessionEnd: Thu 03 Sep 2026 05:38:13 AM EDT PWD=/home/me/life ===
+     filed /home/me/life/.log/2026-09-03-034332-session-a5c0a79a.txt (160,731 bytes)
+     === EXISTS? ===
+     -rw-rw-r-- 1 me me  588 Aug 28 07:33 /tmp/claude-session-compact-debug.log
+     -rw-rw-r-- 1 me me 2198 Sep  3 05:38 /tmp/claude-session-end-debug.log
+     -rw-rw-r-- 1 me me 2198 Sep  3 05:38 /tmp/claude-session-end-debug.log
+
+  ⎿  897faf0 HEAD@{2026-09-03 05:38:13 -0400}: commit: auto: session end 2026-09-03 05:38
+     2bb000c HEAD@{2026-09-03 05:32:06 -0400}: commit: Prune chronicle from CLAUDE.md
+     29f2922 HEAD@{2026-09-03 05:31:59 -0400}: commit: sync: bump submodule pointers
+     66c9a3f HEAD@{2026-09-03 05:17:13 -0400}: commit: Archive toronto itinerary as 2026-03
+     995d2d3 HEAD@{2026-09-03 05:07:31 -0400}: commit: sync: bump submodule pointers
+     bf1f278 HEAD@{2026-09-03 05:07:04 -0400}: commit: Docs: allowlist publishing tool
+     e6eb857 HEAD@{2026-09-03 04:21:45 -0400}: commit: Health check: handoffs, stale path
+     dae92b2 HEAD@{2026-09-03 04:21:40 -0400}: commit: sync: bump submodule pointers
+     7ef1df7 HEAD@{2026-09-03 04:20:05 -0400}: commit: sync: bump submodule pointers
+     ae5e5a4 HEAD@{2026-09-02 18:28:58 -0400}: commit: NEXT: curiosities-sync gap
+     361eaed HEAD@{2026-09-02 18:25:49 -0400}: commit: Docs: structure, remote rules, task indexes
+     152302b HEAD@{2026-09-02 18:22:36 -0400}: commit: Phase 6: move life topics into repo
+     === reflog origin/main ===
+     897faf0 refs/remotes/origin/main@{2026-09-03 05:38:42 -0400}: update by push
+     2bb000c refs/remotes/origin/main@{2026-09-03 05:32:08 -0400}: update by push
+     66c9a3f refs/remotes/origin/main@{2026-09-03 05:17:14 -0400}: update by push
+     995d2d3 refs/remotes/origin/main@{2026-09-03 05:07:32 -0400}: update by push
+     bf1f278 refs/remotes/origin/main@{2026-09-03 05:07:06 -0400}: update by push
+     e6eb857 refs/remotes/origin/main@{2026-09-03 04:21:47 -0400}: update by push
+     ae5e5a4 refs/remotes/origin/main@{2026-09-02 18:29:01 -0400}: update by push
+     361eaed refs/remotes/origin/main@{2026-09-02 18:25:51 -0400}: update by push
+     152302b refs/remotes/origin/main@{2026-09-02 18:22:55 -0400}: update by push
+     9ed3bd0 refs/remotes/origin/main@{2026-09-02 18:21:40 -0400}: update by push
+     Shell cwd was reset to /home/me/productive_learning
+
+● The debug log shows the hook fired at 05:38:13 — and `origin/main` was updated by push at **05:38:42**, 29 seconds later. That gap is the story. Let me pin down which push that was.
+
+● Bash(cd /home/me/.claude && git reflog --date=iso -8 2>&1; echo "=== origin ==="; git reflog show origin/main --date=iso -8 2>&1; echo "=== status ==="; git status -sb 2>&1 | head -5)
+● Bash(python3 -c " import json p='/home/me/.dotfiles/claude/settings.json' d=json.load(open(p)) print(json.dumps(d.get('hooks',{}), indent=2)) " 2>&1)
+  ⎿  63f8852 HEAD@{2026-09-03 05:38:13 -0400}: commit: auto: session end 2026-09-03 05:38
+     0718914 HEAD@{2026-09-03 05:32:08 -0400}: commit: Rule: CLAUDE.md carries rules not chronicle
+     643373e HEAD@{2026-09-03 03:41:18 -0400}: commit: auto: session end 2026-09-03 03:41
+     5ad91c7 HEAD@{2026-09-02 18:26:41 -0400}: commit: memory: record ~/life migration
+     351f378 HEAD@{2026-09-02 18:21:12 -0400}: commit: memory: rename 3 namespaces for ~/life
+     96ae722 HEAD@{2026-09-02 16:34:33 -0500}: pull --rebase --autostash (finish): returning to refs/heads/main
+     96ae722 HEAD@{2026-09-02 16:34:33 -0500}: pull --rebase --autostash (pick): auto: session end 2026-08-30 00:44
+     0e8cd36 HEAD@{2026-09-02 16:34:33 -0500}: pull --rebase --autostash (start): checkout 0e8cd363a21fbd78ab5f6e0ce5f5ef6d44659a9e
+     === origin ===
+     63f8852 refs/remotes/origin/main@{2026-09-03 05:39:50 -0400}: pull --rebase --autostash: fast-forward
+     0718914 refs/remotes/origin/main@{2026-09-03 05:32:10 -0400}: update by push
+     643373e refs/remotes/origin/main@{2026-09-03 04:19:45 -0400}: update by push
+     5ad91c7 refs/remotes/origin/main@{2026-09-02 18:29:20 -0400}: update by push
+     0e8cd36 refs/remotes/origin/main@{2026-09-02 16:34:33 -0500}: pull --rebase --autostash: fast-forward
+     e23064b refs/remotes/origin/main@{2026-08-28 15:02:40 -0500}: pull --rebase --autostash: fast-forward
+     de94afc refs/remotes/origin/main@{2026-08-28 12:38:56 -0500}: pull --rebase --autostash: fast-forward
+     2d56e9c refs/remotes/origin/main@{2026-08-28 12:21:09 -0500}: update by push
+     === status ===
+     ## main...origin/main
+     Shell cwd was reset to /home/me/productive_learning
+
+  ⎿  {
+       "SessionStart": [
+         {
+           "matcher": "",
+           "hooks": [
+             {
+               "type": "command",
+               "command": "~/.dotfiles/scripts/session-start.sh"
+             }
+           ]
+         }
+       ],
+       "PreCompact": [
+         {
+           "matcher": "",
+           "hooks": [
+             {
+               "type": "command",
+               "command": "~/.dotfiles/scripts/session-compact.sh"
+             }
+           ]
+         }
+       ],
+       "SessionEnd": [
+         {
+           "matcher": "",
+           "hooks": [
+             {
+               "type": "command",
+               "command": "~/.dotfiles/scripts/session-end.sh"
+             }
+           ]
+         }
+       ]
+     }
+
+● Decisive evidence. Let me measure the network timing and confirm the mechanism.
+
+● Bash(cd /home/me/.claude && echo "--- claude-state ls-remote timing ---" && { time timeout 60 git ls-remote origin >/dev/null 2>&1 ; } 2>&1; echo "exit=$?")
+● Bash(cd /home/me/life && echo "--- life ls-remote timing ---" && { time timeout 60 git ls-remote origin >/dev/null 2>&1 ; } 2>&1; echo "exit=$?"; echo "=== credential helper ==="; git config --get-all credential.helper; git config --global --get-all credential.helper)
+  ⎿  --- claude-state ls-remote timing ---
+     
+     real	0m0.919s
+     user	0m0.103s
+     sys	0m0.069s
+     exit=0
+     Shell cwd was reset to /home/me/productive_learning
+
+  ⎿  Exit code 1
+     --- life ls-remote timing ---
+     
+     real	0m0.969s
+     user	0m0.104s
+     sys	0m0.074s
+     exit=0
+     === credential helper ===
+
+● Bash(cd /home/me/life && echo "=== all credential config ==="; git config --list --show-origin 2>/dev/null | grep -i -E 'credential|url\.|askpass|http\.' ; echo "--- env ---"; env | grep -i -E 'GIT_|ASKPASS|GH_|CREDENTIAL' | sed 's/=.*TOKEN.*/=<redacted>/' ; echo "--- files ---"; ls -la ~/.git-credentials 2>&1; ls -la ~/.config/gh/ 2>&1 | head)
+● Bash(echo "=== claude-state repo size / object count ==="; cd /home/me/.claude && du -sh .git 2>/dev/null; git count-objects -vH 2>&1 | head; echo; echo "=== life repo size ==="; cd /home/me/life && du -sh .git 2>/dev/null; git count-objects -vH 2>&1 | head -4)
+  ⎿  === all credential config ===
+     file:/home/me/.gitconfig	credential.https://github.com.helper=
+     file:/home/me/.gitconfig	credential.https://github.com.helper=!/usr/bin/gh auth git-credential
+     file:/home/me/.gitconfig	credential.https://gist.github.com.helper=
+     file:/home/me/.gitconfig	credential.https://gist.github.com.helper=!/usr/bin/gh auth git-credential
+     --- env ---
+     GIT_EDITOR=true
+     --- files ---
+     ls: cannot access '/home/me/.git-credentials': No such file or directory
+     total 16
+     drwxrwx--x  2 me me 4096 Nov 22  2025 .
+     drwx------ 37 me me 4096 Aug 31 04:43 ..
+     -rw-------  1 me me 1660 Nov 22  2025 config.yml
+     -rw-------  1 me me   86 Feb 14  2026 hosts.yml
+     Shell cwd was reset to /home/me/productive_learning
+
+  ⎿  === claude-state repo size / object count ===
+     2.9M	.git
+     count: 400
+     size: 1.70 MiB
+     in-pack: 140
+     packs: 1
+     size-pack: 140.56 KiB
+     prune-packable: 12
+     garbage: 0
+     size-garbage: 0 bytes
+     
+     === life repo size ===
+     19M	.git
+     count: 235
+     size: 17.75 MiB
+     in-pack: 0
+     packs: 0
+     Shell cwd was reset to /home/me/productive_learning
+
+● Network is ~1s for both repos, so this isn't slowness. Let me check whether hook pushes have *ever* succeeded.
+
+● Bash(echo "=== HEAD reflog ==="; git reflog --date=iso -6 2>&1; echo "=== origin/main reflog ==="; git reflog show origin/main --date=iso -8 2>&1)
+  ⎿  === HEAD reflog ===
+     7000142 HEAD@{2026-09-03 03:41:18 -0400}: commit: auto: session end 2026-09-03 03:41
+     e907b11 HEAD@{2026-09-02 18:29:11 -0400}: commit: Phase 6 done: ~/life migration
+     969c9b5 HEAD@{2026-09-02 16:34:45 -0500}: pull --rebase --autostash: Fast-forward
+     3ec4a45 HEAD@{2026-08-28 17:36:29 -0500}: commit: auto: session end 2026-08-28 17:36
+     2b0c764 HEAD@{2026-08-28 17:36:12 -0500}: pull --rebase --autostash: Fast-forward
+     c546a38 HEAD@{2026-08-28 17:17:37 -0500}: commit: auto: session end 2026-08-28 17:17
+     === origin/main reflog ===
+     e907b11 refs/remotes/origin/main@{2026-09-02 18:29:13 -0400}: update by push
+     969c9b5 refs/remotes/origin/main@{2026-09-02 16:34:37 -0500}: pull --rebase --autostash: fast-forward
+     2b0c764 refs/remotes/origin/main@{2026-08-28 17:36:11 -0500}: pull --rebase --autostash: fast-forward
+     c546a38 refs/remotes/origin/main@{2026-08-28 17:21:27 -0500}: pull --rebase --autostash: fast-forward
+     c09a753 refs/remotes/origin/main@{2026-08-28 17:17:17 -0500}: pull --rebase --autostash: fast-forward
+     ecf75a4 refs/remotes/origin/main@{2026-08-28 12:44:16 -0500}: update by push
+     951e983 refs/remotes/origin/main@{2026-08-28 12:41:35 -0500}: pull --rebase: fast-forward
+     09fc6ba refs/remotes/origin/main@{2026-08-28 12:38:57 -0500}: pull --rebase --autostash: fast-forward
+
+● Bash(cd /home/me/masters_planning 2>/dev/null && { echo "=== masters_planning origin reflog ==="; git reflog show origin/main --date=iso -6 2>&1; echo "=== HEAD ==="; git reflog --date=iso -6 2>&1; } ; echo "=== compact hook shape (network steps) ==="; grep -n 'push\|timeout\|DEBUG_LOG' /home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿  === compact hook shape (network steps) ===
+     7:# the readable log-so-far and commits+pushes work in the current repo, EXCLUDING
+     13:# below the claude-state push, so a hook killed in that push checkpointed nothing.
+     17:DEBUG_LOG="/tmp/claude-session-compact-debug.log"
+     18:echo "=== PreCompact: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
+     24:HOOK_JSON="$(timeout 2 cat 2>/dev/null || true)"
+     29:# BEFORE any network I/O. Behind the claude-state push it silently lost six
+     38:  printf '%s\n' "$FILE_RESULT" >> "$DEBUG_LOG"
+     75:      printf 'NOTE: %s has uncommitted work — a parent session never commits it, so it will not reach your other device. Commit from inside %s, or let a session running there do it.\n' "$sub" "$sub" | tee -a "$DEBUG_LOG"
+     85:# Every push is BOUNDED so a hang costs seconds, never the rest of the script.
+     91:    timeout 30 git -C "$STATE" push -q 2>/dev/null || echo "WARNING: claude-state push FAILED or timed out — memory is committed locally but NOT synced. Fix: git -C $STATE pull --rebase && git -C $STATE push"
+     97:# ── NETWORK: push the checkpoint committed above ──────────────────────────────
+     98:# Split from its commit on purpose (rule 3). Also pushes when an EARLIER run
+     99:# committed but died before pushing — the state a killed hook leaves behind.
+     102:  timeout 30 git -C "$CWD" push 2>/dev/null || echo "WARNING: push FAILED or timed out in $CWD — work is committed locally but NOT on the remote (usually the branch moved on another device). Fix: git -C $CWD pull --rebase && git -C $CWD push"
+     114:    timeout 30 git -C "$PARENT" push 2>/dev/null || echo "WARNING: parent push FAILED or timed out in $PARENT — pointer/log commit is local only. Fix: git -C $PARENT pull --rebase && git -C $PARENT push"
+
+● Now let me confirm the scope — I suspect this repo has an unpushed hook commit right now too.
+
+● Bash(for r in /home/me/productive_learning /home/me/life /home/me/.claude /home/me/masters_planning /home/me/.dotfiles; do [ -d "$r/.git" ] || continue; printf '%-32s ' "$r"; git -C "$r" status -sb 2>/dev/null | head -1; done; echo; echo "=== unpushed commits in productive_learning ==="; git -C /home/me/productive_learning log --oneline '@{u}..HEAD' 2>&1)
+● Bash(which setsid nohup flock 2>&1; echo "--- setsid version ---"; setsid --version 2>&1 | head -2; echo "=== grep for any existing backgrounding in scripts ==="; grep -n 'setsid\|nohup\|disown\|&$\| & ' /home/me/.dotfiles/scripts/*.sh)
+  ⎿  /home/me/productive_learning     ## main...origin/main [ahead 1]
+     /home/me/life                    ## main...origin/main
+     /home/me/.claude                 ## main...origin/main
+     /home/me/.dotfiles               ## main...origin/main
+     
+     === unpushed commits in productive_learning ===
+     7000142 auto: session end 2026-09-03 03:41
+
+  ⎿  /usr/bin/setsid
+     /usr/bin/nohup
+     /usr/bin/flock
+     --- setsid version ---
+     setsid from util-linux 2.37.2
+     === grep for any existing backgrounding in scripts ===
+
+● Confirmed — this is systematic, not a one-off: `productive_learning` is **ahead 1 right now** (`7000142`, from the 03:41 SessionEnd). Let me read SessionStart to see where a safety net fits.
+
+● Read(/home/me/.dotfiles/scripts/session-start.sh)
+  ⎿  1	#!/bin/bash
+     2	# SessionStart hook: bring this device current WITHOUT disturbing in-flight work.
+     3	#
+     4	# Replaces the manual "at session start run git pull --rebase + submodule update"
+     5	# instruction. Deliberately gentle, because the workflow assumes dirty/unpushed
+     6	# submodules are normal (you move between devices mid-task):
+     7	#   - ~/.dotfiles is fast-forwarded first, so the workflow machinery itself stays
+     8	#     current across devices (changes apply next session — a hook can't reload the
+     9	#     script it's already running)
+     10	#   - the current repo is pulled with --autostash (your dirty work is preserved)
+     11	#   - each submodule is fast-forwarded ONLY if clean; dirty ones are left ALONE
+     12	#     (never force-checked-out to the recorded pointer, which would strand work)
+     13	# Everything is non-fatal: a failure here must never block starting a session.
+     14	#
+     15	# The whole body runs inside main(), invoked at the very end. That matters: the
+     16	# dotfiles pull below can overwrite THIS script on disk mid-run, and a bash script
+     17	# read line-by-line would then execute garbage from the new file at the old byte
+     18	# offset. Parsing the entire function before executing it makes the o
+          … [10,204 chars elided] …
+     g that failed before — a 161-line "handoff" that was really a
+     179	    # context dump, and rotted unnoticed for 42 days.
+     180	    LINES="$(grep -c '' "$NEXT" 2>/dev/null || echo 0)"
+     181	    [ "${LINES:-0}" -gt 40 ] && echo "session-start: NOTE — NEXT.md is $LINES lines (cap 40). It is drifting into a state snapshot; trim it back to decisions + next action."
+     182	  else
+     183	    echo "session-start: no NEXT.md in $CWD — there is no handoff. Write one as soon as you finish the first stretch of work (see ~/.claude/CLAUDE.md, Starting a fresh session)."
+     184	  fi
+     185	}
+     186	
+     187	main "$@"
+     188	exit 0
+     189
+
+● I have the root cause pinned. Let me record the diagnosis, then check one design decision with you.
+
+Note: the plan-mode workflow wants me to fan out Explore/Plan subagents, but your session guidance says not to call agents unless you ask. I followed your guidance and investigated directly — the evidence was conclusive without it.
+
+● Write(/home/me/.claude/plans/i-ve-run-a-session-async-zebra.md)
+  ⎿  File created successfully at: /home/me/.claude/plans/i-ve-run-a-session-async-zebra.md (file state is current in your context — no need to Read it back)
+
+● AskUserQuestion
+  ⎿  The user answered: "The hook is killed inside its first push, so the work-repo push (sequenced second) never runs. Which fix shape do you want?"="Detach the network phase (Recommended)" selected preview:
+     session-end.sh (local phase, unchanged)
+       file log -> mirror -> commit CWD
+       commit claude-state
+       |
+       +-- setsid session-push.sh &   <- outlives CLI
+       |     push claude-state
+       |     push CWD
+       |     guarded parent pointer bump + push
+       |     all output -> DEBUG_LOG
+       |
+       exit 0   (immediately) notes: I think we've tried rearranging before for a similar problem and it looks like there are still other issues that came up, see your own logs for reference, if detaching is a better long term fix then lets go with this. Read the answers carefully — they may request clarification, changes, or that you not proceed — and follow what they actually say.
+
+● Confirmed — and your note matches what the script's own header records: the 2026-08-30 fix hoisted the log filing, then the 2026-08-31 kill landed one step lower. Reordering has been tried twice and the failure just moves down. Detaching ends that cycle. Writing the final plan.
+
+● Write(/home/me/.claude/plans/i-ve-run-a-session-async-zebra.md)
+  ⎿  The file /home/me/.claude/plans/i-ve-run-a-session-async-zebra.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● ToolSearch(select:ExitPlanMode)
+● ExitPlanMode
+  ⎿  User has approved your plan. You can now start coding. Start with updating your todo list if applicable
+     
+     Your plan has been saved to: /home/me/.claude/plans/i-ve-run-a-session-async-zebra.md
+     You can refer back to it if needed during implementation.
+     
+     ## Approved Plan:
+     # Fix: SessionEnd hook is killed inside its first push, so the work repo never gets pushed
+     
+     ## Context
+     
+     After the 2026-09-03 `~/life` session ended, `git status` reported the branch 1 commit
+     ahead of origin and the user pushed by hand. This is not a `~/life` quirk and not a
+     one-off — it is a structural flaw in `session-end.sh` that has been silently dropping
+     pushes across repos for at least a week.
+     
+     ### The evidence
+     
+     Timeline for the `~/life` session end (all times 2026-09-03, EDT):
+     
+     | Time | Event | Source |
+     |---|---|---|
+     | 05:38:13 | hook fires, files 160KB log | `/tmp/claude-session-end-debug.log` |
+     | 05:38:13 | `~/life` commits `897faf0` | `git reflog` |
+     | 05:38:13 | `~/.claude` commits `63f8852` | `git reflog` |
+     | — | **claude-state push: no `update by push` reflog entry, ever** | `git reflog show origin/main` |
+     | 05:38:42 | `~/life` `origin/main` advances — **this was the manual push** | `git reflog show origin/m
+          … [8,421 chars elided] …
+      do not assume it.
+     3. **Lock works.** Launch two pushers at once against the same repo; confirm the log shows
+        one waiting rather than both pushing.
+     4. **Canary fires.** With a repo deliberately ahead, confirm SessionStart names the
+        unpushed commit instead of printing only "up to date".
+     5. **Real end-to-end, next session.** After the next SessionEnd, check `git reflog show
+        origin/main` for an `update by push` landing within seconds of the `auto: session end`
+        commit — in both the work repo and `~/.claude`. That is the exact evidence that was
+        missing in the `~/life` timeline above.
+
+● Two notes before I start:
+
+**Instruction conflict:** auto mode says make file changes with Bash (`sed`, heredocs). Your global rule `~/.claude/rules/file-edits.md` explicitly overrides that ("This overrides auto mode's 'Bash wherever it can accomplish the job' default, by the user's decision (2026-08-29)"). I'm following your rule — Write/Edit for file changes, Bash for reads and searches.
+
+Let me read the compact hook's tail so I can edit it precisely.
+
+● Bash(sed -n '1,30p' /home/me/.dotfiles/scripts/session-compact.sh; echo "................ 60-115 ................"; sed -n '60,115p' /home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿  #!/bin/bash
+     # PreCompact hook.
+     #
+     # /compact does NOT end the session, so SessionEnd never fires — but /compact is
+     # the primary checkpoint for big, multi-sitting work, and is often where a device
+     # handoff happens. This makes a compact a durable, syncable checkpoint: it files
+     # the readable log-so-far and commits+pushes work in the current repo, EXCLUDING
+     # submodule pointer bumps (same safety invariant as session-end.sh — a pointer
+     # bump is an integration action, never a side effect of a checkpoint).
+     #
+     # Shares session-end.sh's rule 3 — EVERY LOCAL STEP BEFORE EVERY NETWORK STEP —
+     # and shared the same defect until 2026-08-31: the mirror and the repo commit sat
+     # below the claude-state push, so a hook killed in that push checkpointed nothing.
+     # This path is *more* exposed than SessionEnd, not less: a compact is where big
+     # multi-sitting work and device handoffs get their only durable snapshot.
+     
+     DEBUG_LOG="/tmp/claude-session-compact-debug.log"
+     echo "=== PreCompact: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
+     
+     DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+     
+     # The hook hands us JSON on stdin; transcript_path is the authoritative .jsonl for
+     # THIS session - more reliable than 
+          … [3,554 chars elided] …
+     l || true; }
+       [ -d "$CWD/.curiosities" ] && { mkdir -p "$PARENT/curiosities/$PROJECT"; cp -r "$CWD/.curiosities/." "$PARENT/curiosities/$PROJECT/" 2>/dev/null || true; }
+       git -C "$PARENT" add -- "logs/$PROJECT" "curiosities/$PROJECT" 2>/dev/null || true
+       git -C "$PARENT" diff --staged --quiet || {
+         git -C "$PARENT" commit -m "auto: compact log sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
+         timeout 30 git -C "$PARENT" push 2>/dev/null || echo "WARNING: parent push FAILED or timed out in $PARENT — pointer/log commit is local only. Fix: git -C $PARENT pull --rebase && git -C $PARENT push"
+       }
+
+● Bash(sed -n '115,200p' /home/me/.dotfiles/scripts/session-compact.sh; echo "=== total lines ==="; wc -l /home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿    }
+     fi
+     === total lines ===
+     116 /home/me/.dotfiles/scripts/session-compact.sh
+
+● Now the new detached pusher:
+
+● Write(/home/me/.dotfiles/scripts/session-push.sh)
+  ⎿  File created successfully at: /home/me/.dotfiles/scripts/session-push.sh (file state is current in your context — no need to Read it back)
+
+● Now rewire `session-end.sh` — local work stays synchronous, network detaches:
+
+● Edit(/home/me/.dotfiles/scripts/session-end.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-end.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/.dotfiles/scripts/session-end.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-end.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Bash(grep -n 'COMMITTED\|DOTFILES=\|setsid' /home/me/.dotfiles/scripts/session-end.sh; echo "=== syntax ==="; bash -n /home/me/.dotfiles/scripts/session-end.sh && echo "session-end OK"; bash -n /home/me/.dotfiles/scripts/session-push.sh && echo "session-push OK")
+  ⎿  22:#      commit — leaving NEXT.md, the handoff artifact, written but UNCOMMITTED and
+     31:DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+     64:COMMITTED=0
+     95:    COMMITTED=1
+     144:# So the network phase no longer runs in this process at all. `setsid` puts the pusher
+     152:setsid "$DOTFILES/session-push.sh" "$CWD" end </dev/null >>"$DEBUG_LOG" 2>&1 &
+     === syntax ===
+     session-end OK
+     session-push OK
+
+● Bash(sed -n '62,68p;90,98p' /home/me/.dotfiles/scripts/session-end.sh)
+  ⎿  # same reason the log-filing block above duplicates it: a session launched
+     # outside a checkout has no repo to commit, but must still reach the memory sync.
+     COMMITTED=0
+     if [ -n "$CWD" ]; then
+       PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
+     
+       # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
+         [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
+       done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
+     
+       if ! git -C "$CWD" diff --staged --quiet; then
+         git -C "$CWD" commit -m "auto: session end $(date '+%Y-%m-%d %H:%M')"
+         COMMITTED=1
+       fi
+     
+       # ── visibility, NOT automation: name the work this session will not commit ──
+
+● Edit(/home/me/.dotfiles/scripts/session-end.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-end.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/.dotfiles/scripts/session-end.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-end.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Now update the rule-3 header to record the new shape:
+
+● Edit(/home/me/.dotfiles/scripts/session-end.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-end.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Now the same treatment for `session-compact.sh`:
+
+● Bash(sed -n '40,60p' /home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿  fi
+     
+     # ── LOCAL: mirror logs and COMMIT the checkpoint, before any network I/O ──────
+     # Rule 3 (see the header). The CWD guard is DUPLICATED as an `if` rather than
+     # moved up as an early exit, so a session launched outside a checkout still
+     # reaches the memory sync below.
+     COMMITTED=0
+     if [ -n "$CWD" ]; then
+       # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
+       # tracked parent dirs.
+       PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
+       if [ -z "$PARENT" ]; then
+         [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
+         [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
+       fi
+     
+       # Stage WIP, then unstage every submodule path before committing.
+       git -C "$CWD" add -A
+       while IFS= read -r sub; do
+         [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
+       done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
+
+● Edit(/home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-compact.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-compact.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Bash(grep -n 'COMMITTED' /home/me/.dotfiles/scripts/session-compact.sh; echo "--- syntax ---"; bash -n /home/me/.dotfiles/scripts/session-compact.sh && echo "compact OK")
+  ⎿  46:COMMITTED=0
+     72:    COMMITTED=1
+     --- syntax ---
+     compact OK
+
+● Bash(sed -n '68,76p' /home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿    done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
+     
+       if ! git -C "$CWD" diff --staged --quiet; then
+         git -C "$CWD" commit -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')"
+         COMMITTED=1
+       fi
+     
+       # Visibility, NOT automation — see the long note in session-end.sh. A parent
+       # session never commits a submodule's own modified files, so that work is
+
+● Edit(/home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-compact.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-compact.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-compact.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Now the SessionStart canary — the backstop that would have caught this a week ago:
+
+● Edit(/home/me/.dotfiles/scripts/session-start.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-start.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Bash(chmod +x /home/me/.dotfiles/scripts/session-push.sh && ls -l /home/me/.dotfiles/scripts/session-push.sh; echo "--- syntax all ---"; for f in session-push session-end session-compact session-start; do bash -n "/home/me/.dotfiles/scripts/$f.sh" && echo "$f OK"; done)
+  ⎿  -rwxrwxr-x 1 me me 6724 Sep  3 06:08 /home/me/.dotfiles/scripts/session-push.sh
+     --- syntax all ---
+     session-push OK
+     session-end OK
+     session-compact OK
+     session-start OK
+
+● **Verification 1** — run the pusher standalone against the live failure (`productive_learning`, ahead 1):
+
+● Bash(echo "=== BEFORE ==="; git -C /home/me/productive_learning status -sb | head -1 /home/me/.dotfiles/scripts/session-push.sh /home/me/productive_learning end echo "=== AFTER ==="; git -C /home/me/productive_learning status -sb | head -1 echo "=== debug log tail ==="; tail -8 /tmp/claude-session-end-debug.log echo "=== reflog proof ==="; git -C /home/me/productive_learning reflog show origin/main --date=iso -2)
+  ⎿  === BEFORE ===
+     ## main...origin/main [ahead 1]
+     === AFTER ===
+     ## main...origin/main
+     === debug log tail ===
+     filed /home/me/productive_learning/.log/2026-09-02-173456-session-55a6696c.txt (156,956 bytes)
+     NOTE: projects/mylearnbase has uncommitted work — a parent session never commits it, so it will not reach your other device. Commit from inside projects/mylearnbase, or let a session running there do it.
+     === SessionEnd: Thu 03 Sep 2026 05:38:13 AM EDT PWD=/home/me/life ===
+     filed /home/me/life/.log/2026-09-03-034332-session-a5c0a79a.txt (160,731 bytes)
+     [push 2026-09-03 06:11:39] start mode=end repo=/home/me/productive_learning pid=1281215
+     [push 2026-09-03 06:11:39] claude-state: nothing to push
+     [push 2026-09-03 06:11:41] productive_learning: pushed 1 commit(s)
+     [push 2026-09-03 06:11:41] done
+     === reflog proof ===
+     7000142 refs/remotes/origin/main@{2026-09-03 06:11:41 -0400}: update by push
+     e907b11 refs/remotes/origin/main@{2026-09-02 18:29:13 -0400}: update by push
+
+● The stranded commit is pushed with a real `update by push` entry. **Verification 2** — the property everything rests on: does `setsid` survive a process-group kill?
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest rm -rf "$S"; mkdir -p "$S"; cd "$S" cat > child.sh <<'EOF' #!/bin/bash # record our own session/pgid, then do slow work and prove we finished ps -o pid=,ppid=,pgid=,sid= -p $$ >> /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest/child_ids.txt sleep 3 echo "SURVIVED at $(date '+%H:%M:%S')" >> /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest/result.txt EOF chmod +x child.sh  # Parent: launch child under setsid exactly as the hooks do, then SIGKILL its OWN # process group — the closest analogue to the CLI killing the hook. cat > parent.sh <<'EOF' #!/bin/bash S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest ps -o pid=,ppid=,pgid=,sid= -p $$ >> "$S/parent_ids.txt" setsid "$S/child.sh" </dev/null >>"$S/child.log" 2>&1 & kill -9 -- -$$   # kill our whole process group, right now echo "PARENT REACHED THIS LINE (should not)" >> "$S/parent_ids.txt" EOF chmod +x parent.sh setsid ./parent.sh </dev/null >/dev/null 2>&1 echo "launched at $(date '+%H:%M:%S')" echo "--- parent ids (pid ppid pgid sid) ---"; cat parent_ids.txt 2>&1 echo "--- child ids  (pid ppid pgid sid) ---"; cat child_ids.txt 2>&1)
+  ⎿  Exit code 1
+     launched at 06:12:28
+     --- parent ids (pid ppid pgid sid) ---
+     cat: parent_ids.txt: No such file or directory
+     --- child ids  (pid ppid pgid sid) ---
+     cat: child_ids.txt: No such file or directory
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest echo "now: $(date '+%H:%M:%S')"; ls -la "$S" echo "--- parent ids (pid ppid pgid sid) ---"; cat "$S/parent_ids.txt" 2>&1 echo "--- child ids  (pid ppid pgid sid) ---"; cat "$S/child_ids.txt" 2>&1 echo "--- RESULT ---"; cat "$S/result.txt" 2>&1 echo "--- child.log ---"; cat "$S/child.log" 2>&1)
+  ⎿  Exit code 1
+     now: 06:12:36
+     total 20
+     drwxrwxr-x 2 me me 4096 Sep  3 06:12 .
+     drwx------ 3 me me 4096 Sep  3 06:12 ..
+     -rwxrwxr-x 1 me me  401 Sep  3 06:12 child.sh
+     -rw-rw-r-- 1 me me   32 Sep  3 06:12 parent_ids.txt
+     -rwxrwxr-x 1 me me  357 Sep  3 06:12 parent.sh
+     --- parent ids (pid ppid pgid sid) ---
+     1281359    1622 1281359 1281359
+     --- child ids  (pid ppid pgid sid) ---
+     cat: /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest/child_ids.txt: No such file or directory
+     --- RESULT ---
+     cat: /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest/result.txt: No such file or directory
+     --- child.log ---
+     cat: /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest/child.log: No such file or directory
+
+● The child died — the `&` leaves a window where the subshell is still in the hook's process group before `setsid` takes effect. That's a real defect in my launch line, not a test artifact. Testing the fix:
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest rm -f "$S"/{parent_ids.txt,child_ids.txt,result.txt,child.log} cat > "$S/parent.sh" <<'EOF' #!/bin/bash S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest ps -o pid=,ppid=,pgid=,sid= -p $$ >> "$S/parent_ids.txt" # setsid --fork ALWAYS forks and detaches synchronously; no trailing & needed, so # there is no window where the child still sits in this process group. setsid --fork "$S/child.sh" </dev/null >>"$S/child.log" 2>&1 kill -9 -- -$$ echo "PARENT REACHED THIS LINE (should not)" >> "$S/parent_ids.txt" EOF chmod +x "$S/parent.sh" setsid --fork "$S/parent.sh" </dev/null >/dev/null 2>&1 echo "launched at $(date '+%H:%M:%S') — child sleeps 3s then writes result.txt")
+  ⎿  launched at 06:13:00 — child sleeps 3s then writes result.txt
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/killtest echo "now: $(date '+%H:%M:%S')" echo "--- parent (pid ppid pgid sid) ---"; cat "$S/parent_ids.txt" 2>&1 echo "--- child  (pid ppid pgid sid) ---"; cat "$S/child_ids.txt" 2>&1 echo "--- RESULT (proves it outlived the group kill) ---"; cat "$S/result.txt" 2>&1)
+  ⎿  now: 06:13:03
+     --- parent (pid ppid pgid sid) ---
+     1281457    1622 1281457 1281457
+     --- child  (pid ppid pgid sid) ---
+     1281496    1622 1281496 1281496
+     --- RESULT (proves it outlived the group kill) ---
+     SURVIVED at 06:13:03
+
+● Proof: child got its **own** session and pgid (1281496 vs parent's 1281457), reparented to init, and wrote `SURVIVED` 3s later — while its launcher was SIGKILLed immediately and never reached its next line. Applying `setsid --fork` to both hooks:
+
+● Edit(/home/me/.dotfiles/scripts/session-end.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-end.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/.dotfiles/scripts/session-compact.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-compact.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● **Verification 3** — the lock, and **4** — end-to-end through the real hook against a throwaway remote:
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/pushtest rm -rf "$S"; mkdir -p "$S"; cd "$S" git init -q --bare origin.git git init -q work && cd work git config user.email t@t; git config user.name T echo one > a.txt; git add a.txt; git commit -qm "one" git remote add origin "$S/origin.git"; git push -q -u origin HEAD:refs/heads/main 2>&1 git branch -q -M main; git branch -q --set-upstream-to=origin/main main 2>/dev/null echo two >> a.txt; git commit -qam "two" echo "state: $(git status -sb | head -1)" echo "remote HEAD before: $(git -C "$S/origin.git" rev-parse main)" echo "local  HEAD:        $(git rev-parse HEAD)")
+  ⎿  state: ## main...origin/main [ahead 1]
+     remote HEAD before: 1b7ddc3e6b040b178d5cbedcd66b0e575a30dcff
+     local  HEAD:        4cc81fcda2c7d5a13e5eb77d1f439a31db87fa6e
+     Shell cwd was reset to /home/me/productive_learning
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/pushtest # Simulate the hook exactly: launch under setsid --fork from a parent that immediately # SIGKILLs its own process group, using an isolated HOME so claude-state is untouched. export FAKEHOME="$S/fakehome"; mkdir -p "$FAKEHOME" cat > "$S/fakehook.sh" <<EOF #!/bin/bash export HOME="$FAKEHOME" setsid --fork /home/me/.dotfiles/scripts/session-push.sh "$S/work" end </dev/null >>"$S/hook.log" 2>&1 kill -9 -- -\$\$ EOF chmod +x "$S/fakehook.sh" setsid --fork "$S/fakehook.sh" </dev/null >/dev/null 2>&1 echo "hook launched + self-killed at $(date '+%H:%M:%S')")
+  ⎿  hook launched + self-killed at 06:13:43
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/pushtest echo "now $(date '+%H:%M:%S')" echo "remote HEAD after: $(git -C "$S/origin.git" rev-parse main)" echo "local  HEAD:       $(git -C "$S/work" rev-parse HEAD)" echo "local status:      $(git -C "$S/work" status -sb | head -1)" echo "--- pusher log entries for this run ---"; tail -6 /tmp/claude-session-end-debug.log)
+  ⎿  now 06:13:49
+     remote HEAD after: 4cc81fcda2c7d5a13e5eb77d1f439a31db87fa6e
+     local  HEAD:       4cc81fcda2c7d5a13e5eb77d1f439a31db87fa6e
+     local status:      ## main...origin/main
+     --- pusher log entries for this run ---
+     [push 2026-09-03 06:11:39] claude-state: nothing to push
+     [push 2026-09-03 06:11:41] productive_learning: pushed 1 commit(s)
+     [push 2026-09-03 06:11:41] done
+     [push 2026-09-03 06:13:43] start mode=end repo=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/pushtest/work pid=1281714
+     [push 2026-09-03 06:13:43] work: pushed 1 commit(s)
+     [push 2026-09-03 06:13:43] done
+
+● Push landed despite the launcher being SIGKILLed. **Verification 3** — the lock:
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/pushtest echo three >> "$S/work/a.txt"; git -C "$S/work" commit -qam "three" echo "ahead again: $(git -C "$S/work" status -sb | head -1)" # Hold the global lock for 5s from a detached process, then run the pusher and time it. cat > "$S/holder.sh" <<'EOF' #!/bin/bash flock /tmp/claude-session-push.lock -c 'sleep 5' EOF chmod +x "$S/holder.sh" setsid --fork "$S/holder.sh" </dev/null >/dev/null 2>&1 echo "lock holder started at $(date '+%H:%M:%S')" { time /home/me/.dotfiles/scripts/session-push.sh "$S/work" end ; } 2>&1 | tail -4 echo "finished at $(date '+%H:%M:%S')" echo "remote HEAD: $(git -C "$S/origin.git" rev-parse main)" echo "local  HEAD: $(git -C "$S/work" rev-parse HEAD)")
+  ⎿  ahead again: ## main...origin/main [ahead 1]
+     lock holder started at 06:14:03
+     
+     real	0m5.054s
+     user	0m0.017s
+     sys	0m0.038s
+     finished at 06:14:09
+     remote HEAD: 970d4e1d2355c3acf315296c659316400f6e75d7
+     local  HEAD: 970d4e1d2355c3acf315296c659316400f6e75d7
+
+● Waited exactly 5.05s for the lock, then pushed. **Verification 4** — the SessionStart canary, running the real code block against a repo that's deliberately ahead:
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/pushtest echo four >> "$S/work/a.txt"; git -C "$S/work" commit -qam "four" echo "ahead: $(git -C "$S/work" status -sb | head -1)"; echo # Extract and run the REAL canary block from session-start.sh (not a reimplementation) BLOCK="$(sed -n '/^  # ── canary: commits that never reached the remote/,/^  done$/p' /home/me/.dotfiles/scripts/session-start.sh)" echo "--- block extracted (${#BLOCK} chars) ---" echo "=== case 1: repo ahead 1, STATE clean ===" CWD="$S/work" STATE="$HOME/.claude" bash -c "$BLOCK" echo "=== case 2: repo clean (after push) — must print nothing ===" git -C "$S/work" push -q CWD="$S/work" STATE="$HOME/.claude" bash -c "$BLOCK" echo "(end of case 2)" echo "=== case 3: repo with NO upstream — must print nothing, not crash ===" git init -q "$S/noupstream" && git -C "$S/noupstream" -c user.email=t@t -c user.name=T commit -q --allow-empty -m x CWD="$S/noupstream" STATE="$HOME/.claude" bash -c "$BLOCK"; echo "(exit $?, end of case 3)")
+  ⎿  ahead: ## main...origin/main [ahead 1]
+     
+     --- block extracted (1154 chars) ---
+     === case 1: repo ahead 1, STATE clean ===
+     session-start: WARNING — /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/pushtest/work has 1 commit(s) NOT on the remote. They will not reach your other device. Check /tmp/claude-session-end-debug.log for the failure, then: git -C /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/pushtest/work pull --rebase && git -C /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/pushtest/work push
+     === case 2: repo clean (after push) — must print nothing ===
+     (end of case 2)
+     === case 3: repo with NO upstream — must print nothing, not crash ===
+     (exit 0, end of case 3)
+
+● All three canary cases pass. Now the highest-risk piece I moved — the **guarded pointer bump**, which must fail closed when a submodule push fails:
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest rm -rf "$S"; mkdir -p "$S"; cd "$S" export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=user.email GIT_CONFIG_VALUE_0=t@t GIT_CONFIG_KEY_1=user.name GIT_CONFIG_VALUE_1=T git init -q --bare parent-origin.git; git init -q --bare sub-origin.git git init -q subwork && cd subwork && echo s > s.txt && git add . && git commit -qm s1 \   && git remote add origin "$S/sub-origin.git" && git push -q -u origin HEAD:refs/heads/main && git branch -q -M main && git branch -q --set-upstream-to=origin/main main cd "$S"; git init -q parentwork && cd parentwork echo p > p.txt && git add . && git commit -qm p1 git -c protocol.file.allow=always submodule add -q "$S/sub-origin.git" sub 2>&1 | head -3 git add -A && git commit -qm "add sub" git remote add origin "$S/parent-origin.git" && git push -q -u origin HEAD:refs/heads/main && git branch -q -M main && git branch -q --set-upstream-to=origin/main main git -C sub checkout -q main 2>/dev/null; git -C sub branch -q --set-upstream-to=origin/main main 2>/dev/null echo "parent ok: $(git status -sb | head -1)" echo "sub superproject: $(git -C "$S/parentwork/sub" rev-parse --show-superproject-working-tree)")
+  ⎿  parent ok: ## main...origin/main
+     sub superproject: /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest/parentwork
+     Shell cwd was reset to /home/me/productive_learning
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=user.email GIT_CONFIG_VALUE_0=t@t GIT_CONFIG_KEY_1=user.name GIT_CONFIG_VALUE_1=T SUB="$S/parentwork/sub" echo "=== CASE A: submodule push SUCCEEDS -> pointer MUST be recorded ===" echo s2 >> "$SUB/s.txt"; git -C "$SUB" commit -qam s2 SUBHEAD_A="$(git -C "$SUB" rev-parse HEAD)" HOME="$S/fakehome" /home/me/.dotfiles/scripts/session-push.sh "$SUB" end echo "sub on remote:      $(git -C "$S/sub-origin.git" rev-parse main)" echo "sub HEAD:           $SUBHEAD_A" echo "pointer in parent:  $(git -C "$S/parentwork" rev-parse HEAD:sub)" echo "parent origin has:  $(git -C "$S/parent-origin.git" rev-parse HEAD:sub 2>/dev/null)" echo "parent status:      $(git -C "$S/parentwork" status -sb | head -1)")
+  ⎿  === CASE A: submodule push SUCCEEDS -> pointer MUST be recorded ===
+     sub on remote:      42896e6d3c47ccbf95eba19c6e23e96cd79e4bc6
+     sub HEAD:           42896e6d3c47ccbf95eba19c6e23e96cd79e4bc6
+     pointer in parent:  42896e6d3c47ccbf95eba19c6e23e96cd79e4bc6
+     parent origin has:  42896e6d3c47ccbf95eba19c6e23e96cd79e4bc6
+     parent status:      ## main...origin/main
+
+● Case A passes end-to-end. **Case B — the invariant**: submodule push fails, pointer must *not* be recorded:
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=user.email GIT_CONFIG_VALUE_0=t@t GIT_CONFIG_KEY_1=user.name GIT_CONFIG_VALUE_1=T SUB="$S/parentwork/sub" POINTER_BEFORE="$(git -C "$S/parentwork" rev-parse HEAD:sub)" # Break the submodule's remote so its push cannot succeed git -C "$SUB" remote set-url origin "$S/does-not-exist.git" echo s3 >> "$SUB/s.txt"; git -C "$SUB" commit -qam s3 SUBHEAD_B="$(git -C "$SUB" rev-parse HEAD)" echo "sub HEAD (unpushable): $SUBHEAD_B" HOME="$S/fakehome" /home/me/.dotfiles/scripts/session-push.sh "$SUB" end echo echo "pointer BEFORE: $POINTER_BEFORE" echo "pointer AFTER:  $(git -C "$S/parentwork" rev-parse HEAD:sub)" if [ "$POINTER_BEFORE" = "$(git -C "$S/parentwork" rev-parse HEAD:sub)" ]; then echo "PASS: pointer NOT advanced to an unpushed commit"; else echo "FAIL: DANGLING GITLINK RECORDED"; fi echo "--- log ---"; tail -6 /tmp/claude-session-end-debug.log)
+  ⎿  sub HEAD (unpushable): 18750e1cb59258e8b97ce26b718f94fa5a691132
+     
+     pointer BEFORE: 42896e6d3c47ccbf95eba19c6e23e96cd79e4bc6
+     pointer AFTER:  42896e6d3c47ccbf95eba19c6e23e96cd79e4bc6
+     PASS: pointer NOT advanced to an unpushed commit
+     --- log ---
+     [push 2026-09-03 06:15:04] start mode=end repo=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest/parentwork/sub pid=1282453
+     [push 2026-09-03 06:15:04] WARNING: sub push FAILED or timed out — committed locally but NOT on the remote (usually the branch moved on another device). Fix: git -C /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest/parentwork/sub pull --rebase && git -C /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest/parentwork/sub push
+     [push 2026-09-03 06:15:04]   git said: fatal: '/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest/does-not-exist.git' does not appear to be a git repository fatal: Could not read from remote repository.  Please make sure you have the correct access rights and the repository exists.
+     [push 2026-09-03 06:15:04] WARNING: sub HEAD 18750e1cb59258e8b97ce26b718f94fa5a691132 not on remote; pointer NOT recorded
+     [push 2026-09-03 06:15:04] parent parentwork: nothing to push
+     [push 2026-09-03 06:15:04] done
+
+● The invariant holds, and the failure is now loudly logged with git's actual error. Last behavioral check — **compact mode must push but never bump the pointer**:
+
+● Bash(S=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest SUB="$S/parentwork/sub" git -C "$SUB" remote set-url origin "$S/sub-origin.git"   # repair the remote POINTER_BEFORE="$(git -C "$S/parentwork" rev-parse HEAD:sub)" HOME="$S/fakehome" /home/me/.dotfiles/scripts/session-push.sh "$SUB" compact echo "sub HEAD:        $(git -C "$SUB" rev-parse HEAD)" echo "sub on remote:   $(git -C "$S/sub-origin.git" rev-parse main)" echo "pointer BEFORE:  $POINTER_BEFORE" echo "pointer AFTER:   $(git -C "$S/parentwork" rev-parse HEAD:sub)" [ "$POINTER_BEFORE" = "$(git -C "$S/parentwork" rev-parse HEAD:sub)" ] && echo "PASS: compact pushed the submodule but did NOT integrate the pointer" || echo "FAIL: compact bumped the pointer" echo "--- log (compact log gets its own file) ---"; tail -4 /tmp/claude-session-compact-debug.log)
+  ⎿  sub HEAD:        18750e1cb59258e8b97ce26b718f94fa5a691132
+     sub on remote:   18750e1cb59258e8b97ce26b718f94fa5a691132
+     pointer BEFORE:  42896e6d3c47ccbf95eba19c6e23e96cd79e4bc6
+     pointer AFTER:   42896e6d3c47ccbf95eba19c6e23e96cd79e4bc6
+     PASS: compact pushed the submodule but did NOT integrate the pointer
+     --- log (compact log gets its own file) ---
+     [push 2026-09-03 06:15:16] start mode=compact repo=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/subtest/parentwork/sub pid=1282583
+     [push 2026-09-03 06:15:16] sub: pushed 1 commit(s)
+     [push 2026-09-03 06:15:16] parent parentwork: nothing to push
+     [push 2026-09-03 06:15:16] done
+
+● All checks pass. Final review of the changed hooks before committing:
+
+● Bash(echo "############ session-end.sh (from local phase to end) ############"; sed -n '56,160p' /home/me/.dotfiles/scripts/session-end.sh)
+  ⎿  ############ session-end.sh (from local phase to end) ############
+     fi
+     
+     # ── LOCAL: mirror logs and COMMIT the current repo, before any network I/O ────
+     # Rule 3. This whole block used to sit *below* the claude-state push; on
+     # 2026-08-31 the hook died in that push and never got here, so the session's
+     # NEXT.md was written but never committed. Nothing in here touches the network,
+     # so nothing in here can be lost to a killed push.
+     # The CWD guard is DUPLICATED as an `if` rather than moved up as an early exit —
+     # same reason the log-filing block above duplicates it: a session launched
+     # outside a checkout has no repo to commit, but must still reach the memory sync.
+     if [ -n "$CWD" ]; then
+       PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
+     
+       # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
+       # tracked parent dirs (same convention the manual protocol used — these dirs are
+       # parent-synced, never committed inside the project).
+       if [ -z "$PARENT" ]; then
+         [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
+         [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root";
+          … [4,938 chars elided] …
+     #
+     # `--fork` with NO trailing `&`, and both halves matter. A backgrounded `setsid ... &`
+     # forks a subshell that still belongs to THIS process group until setsid() actually
+     # runs, so a kill arriving in that window takes the pusher down with the hook — the
+     # very failure this is meant to end. Measured 2026-09-03: with `&` the child was killed
+     # before it ever started; with `--fork` it landed in its own session (own sid+pgid,
+     # reparented to init) and completed after its launcher was SIGKILLed. `--fork` also
+     # guarantees setsid forks rather than exec'ing in place, which would block this hook.
+     #
+
+● Bash(cd /home/me/.dotfiles && git status --short && echo "--- branch ---" && git status -sb | head -1 && echo "--- diffstat ---" && git diff --stat)
+  ⎿   M claude/settings.json
+      M scripts/session-compact.sh
+      M scripts/session-end.sh
+      M scripts/session-start.sh
+     ?? scripts/session-push.sh
+     --- branch ---
+     ## main...origin/main
+     --- diffstat ---
+      claude/settings.json       |   4 +-
+      scripts/session-compact.sh |  67 +++++++++++++-------------
+      scripts/session-end.sh     | 115 ++++++++++++++++++++++++---------------------
+      scripts/session-start.sh   |  17 +++++++
+      4 files changed, 114 insertions(+), 89 deletions(-)
+     Shell cwd was reset to /home/me/productive_learning
+
+● `claude/settings.json` is also modified — per your memory note that's usually just key-reordering churn. Checking semantically before deciding whether to touch it:
+
+● Bash(cd /home/me/.dotfiles && git diff claude/settings.json | head -30; echo "=== semantic compare ==="; python3 -c " import json,subprocess head=json.loads(subprocess.run(['git','-C','/home/me/.dotfiles','show','HEAD:claude/settings.json'],capture_output=True,text=True).stdout) cur=json.load(open('/home/me/.dotfiles/claude/settings.json')) def norm(o):     if isinstance(o,dict): return {k:norm(v) for k,v in sorted(o.items())}     if isinstance(o,list): return sorted((json.dumps(norm(i),sort_keys=True) for i in o))     return o print('semantically identical' if norm(head)==norm(cur) else 'REAL DIFFERENCE') ")
+  ⎿  diff --git a/claude/settings.json b/claude/settings.json
+     index 0ae4fee..7f721d8 100644
+     --- a/claude/settings.json
+     +++ b/claude/settings.json
+     @@ -69,6 +69,7 @@
+            }
+          ]
+        },
+     +  "workflowKeywordTriggerEnabled": false,
+        "enabledPlugins": {
+          "rust-analyzer-lsp@claude-plugins-official": true,
+          "playwright@claude-plugins-official": true,
+     @@ -89,6 +90,5 @@
+        "autoCompactEnabled": false,
+        "switchModelsOnFlag": false,
+        "skipAutoPermissionPrompt": true,
+     -  "voiceEnabled": false,
+     -  "workflowKeywordTriggerEnabled": false
+     +  "voiceEnabled": false
+      }
+     === semantic compare ===
+     semantically identical
+     Shell cwd was reset to /home/me/productive_learning
+
+● Confirmed pure key-reordering, exactly as your memory note predicted — leaving it untouched. Committing only the four scripts:
+
+● Bash(cd /home/me/.dotfiles && git add scripts/session-push.sh scripts/session-end.sh scripts/session-compact.sh scripts/session-start.sh && git status --short && echo "--- msg length ---" && echo -n "[fix]: detach hook pushes from CLI lifetime" | wc -c)
+  ⎿   M claude/settings.json
+     M  scripts/session-compact.sh
+     M  scripts/session-end.sh
+     A  scripts/session-push.sh
+     M  scripts/session-start.sh
+     --- msg length ---
+     43
+     Shell cwd was reset to /home/me/productive_learning
+
+● Bash(cd /home/me/.dotfiles && git commit -q -m "[fix]: detach hook pushes from CLI lifetime" && git log --oneline -1 && git push -q && echo "pushed" && git status -sb | head -1 && git reflog show origin/main --date=iso -1)
+  ⎿  af69170 [fix]: detach hook pushes from CLI lifetime
+     pushed
+     ## main...origin/main
+     af69170 refs/remotes/origin/main@{2026-09-03 06:15:52 -0400}: update by push
+     Shell cwd was reset to /home/me/productive_learning
+
+● Now the submodule pointer in `productive_learning` — dry run first:
+
+● Bash(python3 ~/.dotfiles/scripts/sync_pointers.py --dry-run 2>&1)
+  ⎿  [dry-run] bump: projects/mylearnbase -> 8e5690444e
+     [dry-run] bump: setup_files/dotfiles -> 67187e8b81
+
+● Two things to be careful about there. Checking before I touch anything:
+
+● Bash(echo "=== setup_files/dotfiles (separate checkout of same remote) ==="; git -C /home/me/productive_learning/setup_files/dotfiles status -sb | head -1; git -C /home/me/productive_learning/setup_files/dotfiles log --oneline -1 echo; echo "=== projects/mylearnbase ==="; git -C /home/me/productive_learning/projects/mylearnbase status -sb | head -1; git -C /home/me/productive_learning/projects/mylearnbase status --short | head -10 echo; echo "=== recorded pointers vs checkouts ==="; git -C /home/me/productive_learning submodule status | sed -n '1,20p')
+  ⎿  === setup_files/dotfiles (separate checkout of same remote) ===
+     ## main...origin/main
+     67187e8 Add publish_export: allowlist scrub tool
+     
+     === projects/mylearnbase ===
+     ## main...origin/main [behind 9]
+     ?? content/posts/opinions/skip-the-boilerplate.md
+     
+     === recorded pointers vs checkouts ===
+      e222297611fab723b4325255505159c7f1ec6239 projects/img_gen (heads/master)
+     +8e5690444ec6de31254988313e31e2f155fba2fb projects/mylearnbase (heads/main)
+      92dc524e813004074dbe2c07963515ed4bd9a27c projects/omni-me (v1.0.4-2-g92dc524)
+      f9d7f20f31de1d91c7f7f41aa9a4bcad0d84d230 projects/omni-me-private (heads/main)
+      285b4604a097c8d85518e969c9d49997f225baff projects/stillpoint (heads/main)
+      bebe5a03f01b69f5976d3331d5265d67756e6b25 projects/video-toolkit (heads/main)
+     +67187e8b812b92983526fb70469b17d8e2b78a49 setup_files/dotfiles (heads/main)
+
+● Exactly the trap the doctrine warns about: `mylearnbase` is behind 9 with untracked work, so `sync_pointers.py` would sweep its pointer too. Bumping **only** the dotfiles path:
+
+● Bash(cd /home/me/productive_learning/setup_files/dotfiles && git pull --ff-only -q && git log --oneline -1 && git add -- setup_files/dotfiles && git status --short && echo "--- staged only? ---" && git diff --staged --stat)
+  ⎿  Exit code 128
+     af69170 [fix]: detach hook pushes from CLI lifetime
+     fatal: pathspec 'setup_files/dotfiles' did not match any files
+
+● Bash(git -C /home/me/productive_learning add -- setup_files/dotfiles && git -C /home/me/productive_learning diff --staged --stat && echo "--- full status ---" && git -C /home/me/productive_learning status --short)
+  ⎿   setup_files/dotfiles | 2 +-
+      1 file changed, 1 insertion(+), 1 deletion(-)
+     --- full status ---
+      M projects/mylearnbase
+     M  setup_files/dotfiles
+
+● Bash(git -C /home/me/productive_learning commit -q -m "sync: bump dotfiles pointer" && git -C /home/me/productive_learning log --oneline -1 && git -C /home/me/productive_learning push -q && echo "pushed" && git -C /home/me/productive_learning status -sb | head -1)
+  ⎿  46313c8 sync: bump dotfiles pointer
+     pushed
+     ## main...origin/main
+
+● Work is committed and pushed. Two records now need updating — your `NEXT.md` decision about hook ordering is now superseded, and so is the matching memory note:
+
+● Bash(cat /home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md; echo "############ NEXT.md decision line ############"; grep -n 'partition\|0953f54\|re-pair' /home/me/productive_learning/NEXT.md)
+  ⎿  ---
+     name: session_log_hook_ordering
+     description: "Session-log hooks must do local filing BEFORE any git push; how to spot the failure, and why paisa never gets logs at all"
+     metadata: 
+       node_type: memory
+       type: project
+       originSessionId: fa7db774-e4fe-46a9-b860-b166dcf7fd0d
+       modified: 2026-08-31T08:06:31.922Z
+     ---
+     
+     **Fixed 2026-08-30.** `session-end.sh` / `session-compact.sh` used to run the
+     claude-state (memory) sync *before* filing the session log. Every hook run that had
+     memory to push died inside that push and never reached the filing step — **six session
+     logs silently lost** (4 omni-me, 2 workspace root) between 2026-08-28 and 2026-08-30.
+     Back-filled from the surviving `.jsonl` transcripts; nothing was permanently lost.
+     
+     **Verified in production 2026-08-31 — but only for the log filing.** The SessionEnd at
+     22:06 had memory to push (claude-state commit `8cf8fdd`) and filed its log anyway.
+     
+     **That verification was too narrow, and the SAME KILL STRUCK AGAIN 9 hours later.** The
+     2026-08-30 fix hoisted *one line* — the log filing — above the push. Everything else
+     stayed below it. At 01:31:20 on 2026-08-31 the hook filed its log ✅, entered the
+     claude-state push, and died there: the
+          … [2,464 chars elided] …
+     ng
+     about the four steps still sitting behind the push.
+     
+     **Separate, SETTLED (user, 2026-08-30):** `~/Documents/paisa` is **not a git repo** (no
+     `.git`), so `session-end.sh` exits at its repo guard and paisa session logs are *never*
+     filed. Unrelated to the bug above. **This is fine and stays as-is — do not `git init`
+     paisa, and do not re-raise it.** Its memory still syncs (that block runs regardless).
+     ############ NEXT.md decision line ############
+     18:- **Hooks partition ALL local work before ANY network I/O** (dotfiles `0953f54`). **Never
+     19:  re-pair commit and push** — that split IS the fix.
+
+● Edit(/home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md)
+  ⎿  <tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>
+
+● Read(/home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md)
+  ⎿  1	---
+     2	name: session_log_hook_ordering
+     3	description: "Session-log hooks must do local filing BEFORE any git push; how to spot the failure, and why paisa never gets logs at all"
+     4	metadata: 
+     5	  node_type: memory
+     6	  type: project
+     7	  originSessionId: fa7db774-e4fe-46a9-b860-b166dcf7fd0d
+     8	  modified: 2026-08-31T08:06:31.922Z
+     9	---
+     10	
+     11	**Fixed 2026-08-30.** `session-end.sh` / `session-compact.sh` used to run the
+     12	claude-state (memory) sync *before* filing the session log. Every hook run that had
+     13	memory to push died inside that push and never reached the filing step — **six session
+     14	logs silently lost** (4 omni-me, 2 workspace root) between 2026-08-28 and 2026-08-30.
+     15	Back-filled from the surviving `.jsonl` transcripts; nothing was permanently lost.
+     16	
+     17	**Verified in production 2026-08-31 — but only for the log filing.** The SessionEnd at
+     18	22:06 had memory to push (claude-state commit `8cf8fdd`) and filed its log anyway.
+     19	
+     20	**That verification was too narrow, and the SAME KILL STRUCK AGAIN 9 hours later.** The
+     21	2026-08-30 fix hoisted *one line* — the log filing — above the push. Everything else
+     22	stayed below it. At 01:31:20 on 2026-08-31 the hook filed its 
+          … [2,450 chars elided] …
+     56	different bug. Equally: a verification must exercise the *failure* path, not just the
+     57	happy one. "Prod-verified" here meant "the step I fixed now works", which said nothing
+     58	about the four steps still sitting behind the push.
+     59	
+     60	**Separate, SETTLED (user, 2026-08-30):** `~/Documents/paisa` is **not a git repo** (no
+     61	`.git`), so `session-end.sh` exits at its repo guard and paisa session logs are *never*
+     62	filed. Unrelated to the bug above. **This is fine and stays as-is — do not `git init`
+     63	paisa, and do not re-raise it.** Its memory still syncs (that block runs regardless).
+     64
+
+● Edit(/home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md)
+  ⎿  The file /home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md has been updated successfully.
+
+● Edit(/home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md)
+  ⎿  The file /home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md has been updated successfully.
+
+● Edit(/home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md)
+  ⎿  The file /home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md has been updated successfully.
+
+● Now the `MEMORY.md` index line and `NEXT.md`:
+
+● Edit(/home/me/.claude/projects/-home-me-productive-learning/memory/MEMORY.md)
+  ⎿  <tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>
+
+● Read(/home/me/.claude/projects/-home-me-productive-learning/memory/MEMORY.md)
+  ⎿  34	## Memory Index
+     35	- [project_workflow_overhaul.md](project_workflow_overhaul.md) — **Phase 8 BUILT 2026-08-28** — `NEXT.md` at each repo root, PRINTED into context by SessionStart (not pointed at; a pointer already failed), rewritten every *sitting*, max 40 lines, decisions-only never a state snapshot; STALE+oversize canaries; dotfiles `46c640c`, unproven cross-device. Also: cross-device Claude workflow overhaul; Phases 0+3 (hooks, log-filing, doc rewrite) done 2026-08-23; **Phase 1 built & pushed 2026-08-28** — private claude-state repo IS ~/.claude, deny-by-default .gitignore, memory tracked at state/memory/<slug> keyed on $HOME-RELATIVE path (absolute differs: /home/efe vs /home/me) with projects/<key>/memory as a symlink; hooks pull/adopt/canary + commit/push. **Device-2 first sync DONE 2026-08-28** — 65→290 notes unioned, 0 lost; device 2 was the HEAVY device (197 notes the remote lacked); only the 3 `MEMORY.md` files conflicted, exactly as predicted, since it is the one file every session appends to. Return leg (device-1 recall of a device-2-authored note) still unproven. **Phase 4 DONE 2026-08-29** — `PROJECT_PROCESS.md` single-sourced by DELETING all five mirrors (not s
+          … [853 chars elided] …
+     iled — settled as fine, don't re-raise
+     37	- [session_end_commit_scope.md](session_end_commit_scope.md) — SessionEnd commits **everything** in `$CWD` (not just configs/logs). The one hole, verified: a **parent** session never commits a **submodule's** working tree — that work is silently stranded on the device. Run the session inside the submodule
+     38	- [omni_task_index_is_tracked.md](omni_task_index_is_tracked.md) — `.omni/tasks.toml` is TRACKED authored content; never gitignore it. "Regenerable" was wrong — task **ids** don't regenerate, and untracked indexes sat one clone from id collision
+     39
+
+● Edit(/home/me/.claude/projects/-home-me-productive-learning/memory/MEMORY.md)
+  ⎿  The file /home/me/.claude/projects/-home-me-productive-learning/memory/MEMORY.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Read(/home/me/productive_learning/NEXT.md)
+  ⎿  1	# NEXT — productive_learning (workspace root)
+     2	
+     3	**Updated:** 2026-09-02 · **on device 2** (`surface`, `$HOME=/home/me`; user relocating)
+     4	
+     5	## Next action
+     6	1. **Phase 5** (cost/model) — the only unshelved phase left, exploratory, blocks nothing.
+     7	   Scope is *delegated/subagent* work only; Opus stays the main-session default.
+     8	2. **Auto-push** — still needs a user decision; it gates the `.omni/tasks.toml` staleness
+     9	   canary, which is the natural follow-on to Phase 9 and deliberately deferred behind it.
+     10	3. `~/life` exists now and has its own `NEXT.md` — personal-life work happens there,
+     11	   not here.
+     12	
+     13	## Decisions in force
+     14	- **Phases 0/1/2/3/4/6/7/8 + decision 8 are DONE. Do not reopen them.**
+     15	- **🅿️ Phase 9 SHELVED** — resumes only when omni-me builds the app half. Contract at
+     16	  `setup_files/TASK_HUB_CONTRACT.md`; `tasks.md` is never parsed; indexes are TRACKED;
+     17	  **reusing a task `id` is the only irreversible mistake.**
+     18	- **Hooks partition ALL local work before ANY network I/O** (dotfiles `0953f54`). **Never
+     19	  re-pair commit and push** — that split IS the fix.
+     20	- **A parent session NEVER auto-commits a submodule.** Editing submodule file
+          … [749 chars elided] …
+     ve `tasks.md` files, `~/.dotfiles/*`, and the
+     32	whole `~/life` migration — all verified live this session, not merely read.
+     33	
+     34	## Open threads
+     35	- **A cross-device runbook is a hypothesis, not an instruction.** Phase 6's, written on
+     36	  device 1, had five errors — one would have published private files to a public repo.
+     37	  Phase 4 was corrected the same way. Verify against live state before any irreversible step.
+     38	- **Memory slugs derive from `$PWD`** relative to `$HOME`; moving a directory silently
+     39	  orphans its notes. Rename namespaces first, in the same sitting as the move.
+     40
+
+● Edit(/home/me/productive_learning/NEXT.md)
+  ⎿  The file /home/me/productive_learning/NEXT.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/productive_learning/NEXT.md)
+  ⎿  The file /home/me/productive_learning/NEXT.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Bash(echo "NEXT.md lines: $(grep -c '' /home/me/productive_learning/NEXT.md) (cap 40)"; echo "MEMORY.md: $(grep -c '' /home/me/.claude/projects/-home-me-productive-learning/memory/MEMORY.md) lines / $(wc -c < /home/me/.claude/projects/-home-me-productive-learning/memory/MEMORY.md) bytes (cap 200 / 25600)")
+  ⎿  NEXT.md lines: 40 (cap 40)
+     MEMORY.md: 38 lines / 5104 bytes (cap 200 / 25600)
+
+● Both within caps. Committing the handoff deliberately (explicit paths — never `add -A` in a parent repo):
+
+● Bash(git add -- NEXT.md && git status --short && git commit -q -m "Handoff: hooks detach network phase" && git log --oneline -1 && git push -q && echo "pushed" && git status -sb | head -1)
+  ⎿  M  NEXT.md
+      M projects/mylearnbase
+     8ec4b5b Handoff: hooks detach network phase
+     pushed
+     ## main...origin/main
+
+● Bash(rm -rf /tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/{killtest,pushtest,subtest} echo "=== final repo states ===" for r in /home/me/productive_learning /home/me/life /home/me/.claude /home/me/.dotfiles; do printf '%-30s ' "$r"; git -C "$r" status -sb 2>/dev/null | head -1; done echo; echo "=== hooks wired ==="; grep -n 'session-push' /home/me/.dotfiles/scripts/session-end.sh /home/me/.dotfiles/scripts/session-compact.sh | grep setsid echo; echo "=== dotfiles submodule pointer matches ~/.dotfiles HEAD? ===" echo "~/.dotfiles HEAD:        $(git -C /home/me/.dotfiles rev-parse HEAD)" echo "recorded pointer:        $(git -C /home/me/productive_learning rev-parse HEAD:setup_files/dotfiles)")
+  ⎿  === final repo states ===
+     /home/me/productive_learning   ## main...origin/main
+     /home/me/life                  ## main...origin/main
+     /home/me/.claude               ## main...origin/main
+     /home/me/.dotfiles             ## main...origin/main
+     
+     === hooks wired ===
+     /home/me/.dotfiles/scripts/session-compact.sh:115:setsid --fork "$DOTFILES/session-push.sh" "$CWD" compact </dev/null >>"$DEBUG_LOG" 2>&1
+     /home/me/.dotfiles/scripts/session-end.sh:25:#      session-push.sh under `setsid` at the bottom of this file. Local work is
+     /home/me/.dotfiles/scripts/session-end.sh:163:setsid --fork "$DOTFILES/session-push.sh" "$CWD" end </dev/null >>"$DEBUG_LOG" 2>&1
+     
+     === dotfiles submodule pointer matches ~/.dotfiles HEAD? ===
+     ~/.dotfiles HEAD:        af69170b57b233337cd948a87ad207fe9dea8823
+     recorded pointer:        af69170b57b233337cd948a87ad207fe9dea8823
+
+● Done and verified. Here's what was actually wrong.
+
+## Your instinct was right, and it's worse than `~/life`
+
+The hook committed but never pushed. The reflog timeline is decisive:
+
+- `~/life` committed `897faf0` at **05:38:13**; `origin/main` only advanced at **05:38:42** — that was *your* manual push.
+- claude-state committed `63f8852` at 05:38:13, and its remote **had** that commit — but the local reflog has **no `update by push` entry** for it, ever. That's the fingerprint of a push killed after the server accepted the ref and before the client recorded it.
+
+So the hook died *inside* the claude-state push and never reached the `~/life` push. And `productive_learning` was stranded at the same time — `7000142` from the 03:41 session, unpushed, and SessionStart cheerfully printed "Current branch main is up to date" (the *pull* had nothing to fetch) while the branch was ahead.
+
+`timeout 30` was a red herring: `ls-remote` is 0.9s to both remotes. Nothing hangs — the hook is killed fast.
+
+## Why reordering kept failing
+
+You remembered correctly. Three strikes, each fixed by reordering, each landing one step lower: 2026-08-30 (six logs) → 2026-08-31 (uncommitted `NEXT.md`) → 2026-09-03 (unpushed work repo). **Every ordering leaves something after the first push.** So the network phase is now out of the hook's lifetime entirely: `session-push.sh`, launched via `setsid --fork`.
+
+## A defect in my own first attempt
+
+My initial launch line was `setsid ... &`. The kill test **failed** — the child never started. The `&` forks a subshell that still belongs to the hook's process group until `setsid()` actually runs, and a kill in that window takes it down. `setsid --fork` with no `&` fixed it: child got its own sid+pgid (1281496 vs launcher's 1281457), reparented to init, and completed 3s after its launcher was SIGKILLed. That's exactly the class of bug that would have shipped silently if I'd only tested the happy path.
+
+## Verified
+
+| Test | Result |
+|---|---|
+| Stranded `7000142` pushed standalone | real `update by push` at 06:11:41 |
+| Push survives launcher SIGKILL (full hook path) | remote HEAD advanced; hook never reached its next line |
+| `flock` serialises pushers | waited 5.05s for a held lock, then pushed |
+| Submodule push **fails** → pointer | **not** recorded; warning + git's actual error logged |
+| Compact mode | pushes submodule, never bumps pointer |
+| SessionStart canary | fires when ahead; silent when clean; silent with no upstream |
+
+## Two judgment calls
+
+- **`sync_pointers.py` would have swept `projects/mylearnbase`'s pointer** — it's behind 9 with an untracked post. I bumped only `setup_files/dotfiles` explicitly and left yours alone.
+- **The SessionStart canary is warn-only, not auto-push.** Your `NEXT.md` still lists auto-push as an open decision, so I didn't quietly make it for you.
+
+`claude/settings.json` was modified but is semantically identical to HEAD — pure key reordering, exactly as your memory note predicts. Left uncommitted.
+
+Memory note, `MEMORY.md`, and `NEXT.md` are updated; all four repos are clean and level with their remotes. **The next SessionEnd is the live end-to-end test** — hooks are read from disk when the event fires, so it'll run the new code. Check `git reflog show origin/main` for an `update by push` within seconds of the `auto: session end` commit; if anything still fails, the next SessionStart will now say so instead of staying quiet.
+
+❯ I'm torn for auto push, because part of me wants stuff to always be up to date, but then there's the other side that thinks if there really is something that wasn't pushed it either means something has broken in the end of session script, or I made changes outside the session and did not commit or push them like with the mylearnbase pointer you say, I don't think those should be hidden by an autopush, because I would prefer if the session end is broken it should be surfaced so it can be fixed, if I made changes outside the session I should be asked how I want to handle them especially if it's a public repo since once it's pushed publicly there's no going back
+
+● Your reasoning holds up, and there's one piece I should add that changes where the risk actually sits. Let me verify it rather than assert it:
+
+● Bash(for r in RustWright/productive_learning RustWright/life RustWright/dotfiles; do printf '%-32s ' "$r"; gh api "repos/$r" --jq '.visibility' 2>/dev/null || echo "(no access/not found)"; done echo "--- productive_learning submodule remotes ---" git -C /home/me/productive_learning config -f .gitmodules --get-regexp 'url$' | awk '{print $2}')
+  ⎿  RustWright/productive_learning   {"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/repos#get-a-repository","status":"404"}(no access/not found)
+     RustWright/life                  private
+     RustWright/dotfiles              public
+     --- productive_learning submodule remotes ---
+     https://github.com/RustWright/mylearnbase.git
+     https://github.com/RustWright/img_gen.git
+     https://github.com/RustWright/dotfiles.git
+     https://github.com/RustWright/omni-me.git
+     https://github.com/RustWright/omni-me-private.git
+     https://github.com/RustWright/video-toolkit.git
+     https://github.com/RustWright/stillpoint.git
+
+● Bash(echo "productive_learning remote: $(git -C /home/me/productive_learning remote get-url origin)" for r in mylearnbase img_gen dotfiles omni-me omni-me-private video-toolkit stillpoint; do printf '%-20s ' "$r"; gh api "repos/RustWright/$r" --jq '.visibility' 2>/dev/null || echo "(404)"; done)
+  ⎿  productive_learning remote: https://github.com/RustWright/productive-learning.git
+     mylearnbase          public
+     img_gen              public
+     dotfiles             public
+     omni-me              public
+     omni-me-private      private
+     video-toolkit        private
+     stillpoint           private
+
+● Bash(gh api repos/RustWright/productive-learning --jq '.visibility' 2>&1)
+  ⎿  private
+
+● Checked: `productive_learning` itself is private, but **four submodules are public** — `mylearnbase`, `img_gen`, `dotfiles`, `omni-me`.
+
+## Your reasoning is right, and I'd settle it as-is
+
+The sharpest version of your own argument: now that the pusher self-retries on every session end, **a branch still ahead at SessionStart is a diagnostic, not a chore.** It means the retry itself failed — twice at minimum. Auto-pushing there would consume the only evidence that the machinery is broken and convert a loud failure into a silent one. That's precisely the bug we just spent this session digging out, re-introduced deliberately. Warn-only stays.
+
+## But the irreversibility risk isn't where you're looking
+
+Auto-push already exists — at **SessionEnd**, not SessionStart. And today's fix made it fire reliably for the first time. Concretely, `session-end.sh` does `git add -A` in `$CWD`, commits everything in the working tree, and the pusher then pushes it.
+
+So there's a live example in your tree right now. `projects/mylearnbase` has an untracked file:
+
+```
+?? content/posts/opinions/skip-the-boilerplate.md
+```
+
+`mylearnbase` is **public**. If you run a session inside that submodule — which is exactly what your own memory note tells you to do, since a parent session won't commit a submodule's tree — SessionEnd will `add -A` that draft opinion post, commit it, and now reliably push it to a public repo. Before today, that push frequently died in the claude-state push. **The bug was accidentally acting as a safety net, and I removed it.** That's a real consequence of my change and you should have it in hand.
+
+Your parent-repo instinct already covers the pointer case — rule 1 unstages submodule pointers, which is why `mylearnbase`'s stale pointer survived my session untouched. It's the *inside-the-submodule* path that's open.
+
+## What I'd add
+
+A narrow SessionStart canary: untracked files in a **public** repo. Narrow on purpose — modified tracked files are normal in-flight work here, and a warning that fires every session is one you stop reading within a week (your own note says exactly that about the STALE canary). Untracked-in-a-public-repo is rare and is precisely the "published something I never meant to" case. It surfaces at session *start*, so you're asked before SessionEnd can publish, which is what you said you wanted.
+
+● AskUserQuestion
+  ⎿  Your questions have been answered: "SessionEnd auto-commits and (now reliably) auto-pushes untracked files in public submodules. Do you want a guard?"="Warn at SessionStart (Recommended)" selected preview:
+     session-start: WARNING - mylearnbase is PUBLIC
+     and has 1 untracked file that SessionEnd will
+     commit and PUSH:
+       content/posts/opinions/skip-the-boilerplate.md
+     Add to .gitignore, commit deliberately, or move
+     it out before this session ends.
+     
+     (no change to what any hook pushes). You can now continue with these answers in mind.
+
+● Implementing the SessionStart public-repo untracked-file canary:
+
+● Bash(sed -n '122,150p' /home/me/.dotfiles/scripts/session-start.sh)
+  ⎿    git rev-parse --git-dir &>/dev/null || return 0
+       CWD="$(git rev-parse --show-toplevel)"
+     
+       # Pull the current repo; autostash keeps any uncommitted work out of the way.
+       if ! git -C "$CWD" pull --rebase --autostash 2>/dev/null; then
+         git -C "$CWD" rebase --abort 2>/dev/null || true
+         echo "session-start: WARNING — pull failed in $CWD (likely an unpushed local commit conflicting with the remote). Rolled back to a clean state; you are working from STALE code. Fix by hand: git -C $CWD pull --rebase"
+       fi
+     
+       # ── canary: commits that never reached the remote ───────────────────────────
+       # Nothing used to report this, and the pull above actively MASKS it: with nothing
+       # to fetch it prints "Current branch main is up to date." while the branch is
+       # ahead. That is precisely how a week of dropped SessionEnd pushes went unnoticed
+       # (2026-09-03: ~/life ahead 1, productive_learning ahead 1 from a session two
+       # hours earlier). session-push.sh now retries an ahead branch on its own, so
+       # anything still reported here has failed at least twice — worth a human look.
+       #
+       # Deliberately VISIBILITY, NOT AUTOMATION, matching the doctrine in session-end.sh:
+       # auto-pushing at session start is still an open user decision (see NEXT.md).
+       for R in "$CWD" "$STATE"; do
+         [ -n "$R" ] && [ -d "$R/.git" ] || continue
+         A="$(git -C "$R" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
+         [ "${A:-0}" -gt 0 ] || continue
+         echo "session-start: WARNING — $R has $A commit(s) NOT on the remote. They will not reach your other device. Check /tmp/claude-session-end-debug.log for the failure, then: git -C $R pull --rebase && git -C $R push"
+       done
+     
+       # Gently advance submodules: fetch + ff the clean ones, skip dirty ones.
+       git -C "$CWD" submodule --quiet foreach '
+         if [ -z "$(git status --porcelain)" ]; then
+
+● Edit(/home/me/.dotfiles/scripts/session-start.sh)
+  ⎿  The file /home/me/.dotfiles/scripts/session-start.sh has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Testing the real block across all four cases — public with untracked, private with untracked, public clean, and no-GitHub-remote:
+
+● Bash(bash -n /home/me/.dotfiles/scripts/session-start.sh && echo "syntax OK" BLOCK="$(sed -n '/^  # ── canary: untracked files about to be PUBLISHED/,/^  fi$/p' /home/me/.dotfiles/scripts/session-start.sh)" echo "block: ${#BLOCK} chars" rm -rf ~/.cache/claude-repo-visibility   # start cold echo; echo "=== CASE 1: PUBLIC repo (mylearnbase) with an untracked draft ===" CWD=/home/me/productive_learning/projects/mylearnbase bash -c "$BLOCK" echo; echo "=== CASE 2: PRIVATE repo (productive_learning) — must be silent ===" touch /home/me/productive_learning/.scratch-canary-test CWD=/home/me/productive_learning bash -c "$BLOCK"; echo "(silent = pass)" rm -f /home/me/productive_learning/.scratch-canary-test)
+  ⎿  syntax OK
+     block: 2471 chars
+     
+     === CASE 1: PUBLIC repo (mylearnbase) with an untracked draft ===
+     session-start: WARNING — mylearnbase is a PUBLIC repo and has 1 untracked file(s) that SessionEnd will commit and PUSH:
+       content/posts/opinions/skip-the-boilerplate.md
+     session-start: gitignore them, commit them deliberately, or move them out before this session ends.
+     
+     === CASE 2: PRIVATE repo (productive_learning) — must be silent ===
+     (silent = pass)
+
+● Bash(BLOCK="$(sed -n '/^  # ── canary: untracked files about to be PUBLISHED/,/^  fi$/p' /home/me/.dotfiles/scripts/session-start.sh)" echo "=== CASE 3: PUBLIC repo, clean tree (~/.dotfiles) — must be silent ===" CWD=/home/me/.dotfiles bash -c "$BLOCK"; echo "(silent = pass; dotfiles has no untracked files right now)" echo; echo "=== CASE 4: repo with NO github remote — must be silent, not crash ===" T=/tmp/claude-1000/-home-me-productive-learning/f4ef5397-fe5a-43a1-b887-34fc24d3e026/scratchpad/vistest rm -rf "$T"; mkdir -p "$T"; git init -q "$T"; touch "$T/untracked.txt" CWD="$T" bash -c "$BLOCK"; echo "(exit $?, silent = pass)" echo; echo "=== cache populated + reused (no second gh call) ===" ls -la ~/.cache/claude-repo-visibility/ 2>&1 | tail -4 for f in ~/.cache/claude-repo-visibility/*; do echo "  $(basename $f) = $(cat $f)"; done echo; echo "=== CASE 5: cached path timing (should be ~0s, no network) ===" { time CWD=/home/me/productive_learning/projects/mylearnbase bash -c "$BLOCK" >/dev/null ; } 2>&1 | grep real rm -rf "$T")
+  ⎿  === CASE 3: PUBLIC repo, clean tree (~/.dotfiles) — must be silent ===
+     (silent = pass; dotfiles has no untracked files right now)
+     
+     === CASE 4: repo with NO github remote — must be silent, not crash ===
+     (exit 0, silent = pass)
+     
+     === cache populated + reused (no second gh call) ===
+     drwxrwxr-x  2 me me 4096 Sep  3 06:40 .
+     drwx------ 37 me me 4096 Sep  3 06:40 ..
+     -rw-rw-r--  1 me me    6 Sep  3 06:40 450a0cb6756d5dfa
+     -rw-rw-r--  1 me me    7 Sep  3 06:40 fa879d2cfaa2d171
+       450a0cb6756d5dfa = public
+       fa879d2cfaa2d171 = private
+     
+     === CASE 5: cached path timing (should be ~0s, no network) ===
+     real	0m0.023s
+
+● All five cases pass, cached path is 23ms with no network. Committing:
+
+● Bash(cd /home/me/.dotfiles && git add scripts/session-start.sh && git status --short && echo -n "[add]: public-repo untracked-file canary" | wc -c && git commit -q -m "[add]: public-repo untracked-file canary" && git push -q && echo "pushed" && git log --oneline -1 && git status -sb | head -1)
+  ⎿   M claude/settings.json
+     M  scripts/session-start.sh
+     40
+     pushed
+     503b86b [add]: public-repo untracked-file canary
+     ## main...origin/main
+     Shell cwd was reset to /home/me/productive_learning
+
+● Now recording the settled decision in `NEXT.md` — the auto-push thread can close:
+
+● Read(/home/me/productive_learning/NEXT.md)
+  ⎿  1	# NEXT — productive_learning (workspace root)
+     2	
+     3	**Updated:** 2026-09-03 · **on device 2** (`surface`, `$HOME=/home/me`; user relocating)
+     4	
+     5	## Next action
+     6	1. **Phase 5** (cost/model) — the only unshelved phase left, exploratory, blocks nothing.
+     7	   Scope is *delegated/subagent* work only; Opus stays the main-session default.
+     8	2. **Auto-push** — still needs a user decision; it gates the `.omni/tasks.toml` staleness
+     9	   canary, which is the natural follow-on to Phase 9 and deliberately deferred behind it.
+     10	3. `~/life` exists now and has its own `NEXT.md` — personal-life work happens there,
+     11	   not here.
+     12	
+     13	## Decisions in force
+     14	- **Phases 0/1/2/3/4/6/7/8 + decision 8 are DONE. Do not reopen them.**
+     15	- **🅿️ Phase 9 SHELVED** — resumes only when omni-me builds the app half. Contract at
+     16	  `setup_files/TASK_HUB_CONTRACT.md`; `tasks.md` is never parsed; indexes are TRACKED;
+     17	  **reusing a task `id` is the only irreversible mistake.**
+     18	- **Hooks do LOCAL work only; the entire network phase is DETACHED** into `session-push.sh`
+     19	  via `setsid --fork` (dotfiles `af69170`, 2026-09-03). Reordering was tried 3× and failed
+     20	  3×. Never move a push back into a hook, never drop `--fork`, never add a trailing `&`.
+     21	- **A parent session NEVER auto-commits a submodule.** Editing submodule files from a root
+     22	  session strands them on that device; the hook prints a `NOTE:` naming them. The fix is
+
+● Edit(/home/me/productive_learning/NEXT.md)
+  ⎿  The file /home/me/productive_learning/NEXT.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/productive_learning/NEXT.md)
+  ⎿  The file /home/me/productive_learning/NEXT.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Bash(L=$(grep -c '' /home/me/productive_learning/NEXT.md); echo "NEXT.md: $L lines (cap 40)"; [ "$L" -gt 40 ] && echo "OVER CAP — trimming needed" || echo "within cap")
+  ⎿  NEXT.md: 43 lines (cap 40)
+     OVER CAP — trimming needed
+
+● Read(/home/me/productive_learning/NEXT.md)
+  ⎿  1	# NEXT — productive_learning (workspace root)
+     2	
+     3	**Updated:** 2026-09-03 · **on device 2** (`surface`, `$HOME=/home/me`; user relocating)
+     4	
+     5	## Next action
+     6	1. **Phase 5** (cost/model) — the only unshelved phase left, exploratory, blocks nothing.
+     7	   Scope is *delegated/subagent* work only; Opus stays the main-session default.
+     8	2. **`.omni/tasks.toml` staleness canary** — follow-on to Phase 9, deferred behind it.
+     9	3. `~/life` exists now and has its own `NEXT.md` — personal-life work happens there,
+     10	   not here.
+     11	
+     12	## Decisions in force
+     13	- **Phases 0/1/2/3/4/6/7/8 + decision 8 are DONE. Do not reopen them.**
+     14	- **🅿️ Phase 9 SHELVED** — resumes only when omni-me builds the app half. Contract at
+     15	  `setup_files/TASK_HUB_CONTRACT.md`; `tasks.md` is never parsed; indexes are TRACKED;
+     16	  **reusing a task `id` is the only irreversible mistake.**
+     17	- **Hooks do LOCAL work only; the entire network phase is DETACHED** into `session-push.sh`
+     18	  via `setsid --fork` (dotfiles `af69170`, 2026-09-03). Reordering was tried 3× and failed
+     19	  3×. Never move a push back into a hook, never drop `--fork`, never add a trailing `&`.
+     20	- **Auto-push SETTLED (2026-09-03): hooks
+          … [1,165 chars elided] …
+     ve `tasks.md` files, `~/.dotfiles/*`, and the
+     36	whole `~/life` migration — all verified live this session, not merely read.
+     37	
+     38	## Open threads
+     39	- **A cross-device runbook is a hypothesis, not an instruction.** Phase 6's, written on
+     40	  device 1, had five errors — one would have published private files to a public repo.
+     41	  Phase 4 was corrected the same way. Verify against live state before any irreversible step.
+     42	- **Memory slugs derive from `$PWD`** relative to `$HOME`; moving a directory silently
+     43	  orphans its notes. Rename namespaces first, in the same sitting as the move.
+     44
+
+● Edit(/home/me/productive_learning/NEXT.md)
+  ⎿  The file /home/me/productive_learning/NEXT.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/productive_learning/NEXT.md)
+  ⎿  The file /home/me/productive_learning/NEXT.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/productive_learning/NEXT.md)
+  ⎿  The file /home/me/productive_learning/NEXT.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Edit(/home/me/productive_learning/NEXT.md)
+  ⎿  The file /home/me/productive_learning/NEXT.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+● Bash(L=$(grep -c '' /home/me/productive_learning/NEXT.md); echo "NEXT.md: $L lines (cap 40)" git -C /home/me/productive_learning add -- NEXT.md && git -C /home/me/productive_learning commit -q -m "Handoff: auto-push decision settled" && git -C /home/me/productive_learning push -q && echo "pushed" # bump the dotfiles pointer for the canary commit — ONLY that path cd /home/me/productive_learning/setup_files/dotfiles && git pull --ff-only -q && git log --oneline -1 git -C /home/me/productive_learning add -- setup_files/dotfiles git -C /home/me/productive_learning status --short)
+  ⎿  NEXT.md: 40 lines (cap 40)
+     pushed
+     503b86b [add]: public-repo untracked-file canary
+      M projects/mylearnbase
+     M  setup_files/dotfiles
+
+● Bash(git -C /home/me/productive_learning commit -q -m "sync: bump dotfiles pointer" && git -C /home/me/productive_learning push -q && echo "pushed" echo; echo "=== final states ===" for r in /home/me/productive_learning /home/me/.dotfiles /home/me/.claude /home/me/life; do printf '%-30s ' "$r"; git -C "$r" status -sb 2>/dev/null | head -1; done echo; echo "pointer == ~/.dotfiles HEAD? $([ "$(git -C /home/me/.dotfiles rev-parse HEAD)" = "$(git -C /home/me/productive_learning rev-parse HEAD:setup_files/dotfiles)" ] && echo YES || echo NO)" echo; echo "=== mylearnbase pointer untouched (still yours to decide)? ===" git -C /home/me/productive_learning submodule status | grep mylearnbase)
+  ⎿  pushed
+     
+     === final states ===
+     /home/me/productive_learning   ## main...origin/main
+     /home/me/.dotfiles             ## main...origin/main
+     /home/me/.claude               ## main...origin/main
+     /home/me/life                  ## main...origin/main
+     
+     pointer == ~/.dotfiles HEAD? YES
+     
+     === mylearnbase pointer untouched (still yours to decide)? ===
+     +8e5690444ec6de31254988313e31e2f155fba2fb projects/mylearnbase (heads/main)
+
+● One more record — the memory note should carry the settled doctrine, since `NEXT.md` only reaches sessions in this repo:
+
+● Edit(/home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md)
+  ⎿  <tool_use_error>String to replace not found in file.
+     String: SessionStart gained an ahead-of-upstream canary, because its `pull` prints "up to date"
+     while the branch is ahead, actively masking this.</tool_use_error>
+
+● Bash(grep -n 'ahead-of-upstream canary' -A3 -B1 /home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md)
+  ⎿  62-bare `echo` to a stdout nobody reads, which is why this ran a week unseen. SessionStart
+     63:gained an ahead-of-upstream canary, because its `pull` prints "up to date" while the
+     64-branch is ahead, actively masking this.
+     65-
+     66-**The diagnostic signature of the ORIGINAL bug, if it recurs:** in `/tmp/claude-session-end-debug.log`,
+
+● Edit(/home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md)
+  ⎿  The file /home/me/.claude/projects/-home-me-productive-learning/memory/session_log_hook_ordering.md has been updated successfully.
+
+● Bash(git -C /home/me/.claude status --short; echo "--- leaving this UNCOMMITTED on purpose: it is the live end-to-end test for the new detached pusher at SessionEnd ---")
+  ⎿   M state/memory/productive-learning/MEMORY.md
+      M state/memory/productive-learning/session_log_hook_ordering.md
+     ?? plans/i-ve-run-a-session-async-zebra.md
+     --- leaving this UNCOMMITTED on purpose: it is the live end-to-end test for the new detached pusher at SessionEnd ---
+
+● Settled and implemented.
+
+## Your call stands — and here's the sharpest reason to keep it
+
+Now that the pusher self-retries every session end, **a branch still ahead at SessionStart is a diagnostic, not a chore.** It means the retry itself failed, or work happened outside a session. Auto-pushing there would consume the only evidence that the machinery is broken — the exact failure mode we spent this session digging out, re-introduced on purpose. That reasoning is now recorded in `NEXT.md` and the memory note so it doesn't get re-litigated.
+
+## What I added
+
+`session-start.sh` now warns about untracked files in a **public** repo (dotfiles `503b86b`). Against your live tree it produces:
+
+```
+session-start: WARNING — mylearnbase is a PUBLIC repo and has 1 untracked file(s) that SessionEnd will commit and PUSH:
+  content/posts/opinions/skip-the-boilerplate.md
+session-start: gitignore them, commit them deliberately, or move them out before this session ends.
+```
+
+Scoped three ways so it stays readable — only `$CWD` (a parent session never commits a submodule's tree), only untracked files (modified tracked files are normal in-flight work), only public repos. Visibility comes from a 7-day cached `gh api` lookup; the cached path costs 23ms with no network, and it only runs at all when untracked files exist.
+
+Verified across five cases: public+untracked warns, private+untracked silent, public+clean silent, no-GitHub-remote silent and non-crashing, cache populated and reused.
+
+## Repo visibility, since it's load-bearing
+
+Public: `mylearnbase`, `img_gen`, `dotfiles`, `omni-me`. Private: `productive-learning` itself, `life`, `omni-me-private`, `video-toolkit`, `stillpoint`.
+
+## Two things left for you
+
+**The `mylearnbase` draft post is still untracked and unhandled.** I didn't touch it — that's the decision you said you want to be asked about. Nothing will publish it until you open a session inside that submodule, and now you'll be warned when you do.
+
+**Its stale pointer is also untouched** (`8e56904`, submodule is behind 9). Still yours to integrate deliberately.
+
+I've deliberately left the memory-note updates uncommitted in `claude-state`. That gives this session's SessionEnd real work to do, making it the live end-to-end test of the detached pusher. If it works, `git -C ~/.claude reflog show origin/main` will show an `update by push` within seconds of the `auto: session end` commit. If it doesn't, the next SessionStart will now tell you instead of staying quiet — which is the whole point of the design you just chose.
+
+❯ sounds good, I'll deal with the mylearnbase post in the next session I run out of there
+
+● Sounds right — and the canary will remind you the moment that session opens, so it can't slip.
+
+Everything else is landed and pushed: the detached pusher, both hooks, the two SessionStart canaries, the dotfiles pointer, and the handoff. The only deliberate loose end is the memory-note commit I left for SessionEnd to pick up as the live test.
+
