@@ -117,6 +117,57 @@ main() {
         echo "session-start: NOTE — global rules tier is $RC files / $RL lines (budget 12 / 150). Every line here costs context in every session; merge or demote before adding more."
       fi
     fi
+
+    # ── canary: files the PUBLIC-REPO GATE held back, on ANY device ─────────────
+    # public-gate.sh refuses to auto-publish new sensitive-looking files. That
+    # protection creates a new hazard the user named directly: a false positive is
+    # held back on device A, the user moves to device B, and B has no knowledge of
+    # it — the work is stranded exactly like a submodule's tree in a parent session.
+    #
+    # So the record lives in claude-state, which is private and syncs on EVERY
+    # session regardless of which repo Claude was launched in. This block sits above
+    # the is-this-a-git-repo guard for the same reason the memory sync does: a file
+    # held back in ~/life must still be reported from a productive_learning session.
+    #
+    # Manifests are keyed by device. This device re-validates and PRUNES its own
+    # (resolved = now tracked, gitignored, or gone), so the warning disappears the
+    # moment it is acted on. Other devices' entries are printed verbatim and never
+    # touched — only the machine that holds the file can prove it is resolved.
+    HB="$STATE/state/held-back"
+    if [ -d "$HB" ]; then
+      MINE="$HB/$(hostname).tsv"
+      if [ -f "$MINE" ]; then
+        KEPT="$(mktemp)"
+        while IFS=$'\t' read -r d r rel why; do
+          [ -n "$rel" ] || continue
+          # Resolved if the repo is gone, the file is gone, or git now accounts for
+          # it (tracked or ignored). Anything else is still genuinely stranded.
+          [ -d "$r" ] || continue
+          [ -e "$r/$rel" ] || continue
+          git -C "$r" ls-files --error-unmatch -- "$rel" >/dev/null 2>&1 && continue
+          git -C "$r" check-ignore -q -- "$rel" 2>/dev/null && continue
+          printf '%s\t%s\t%s\t%s\n' "$d" "$r" "$rel" "$why" >> "$KEPT"
+        done < "$MINE"
+        if [ -s "$KEPT" ]; then mv "$KEPT" "$MINE"; else rm -f "$KEPT" "$MINE"; fi
+      fi
+      for M in "$HB"/*.tsv; do
+        [ -f "$M" ] || continue
+        DEV="$(basename "$M" .tsv)"
+        N="$(grep -c '' "$M" 2>/dev/null || echo 0)"
+        [ "${N:-0}" -gt 0 ] || continue
+        if [ "$DEV" = "$(hostname)" ]; then
+          echo "session-start: WARNING — the public-repo gate is holding $N file(s) on THIS device ($DEV), uncommitted and unpushed:"
+        else
+          echo "session-start: WARNING — device '$DEV' is holding $N file(s) that are NOT on this machine and will not sync until resolved THERE:"
+        fi
+        while IFS=$'\t' read -r d r rel why; do
+          [ -n "$rel" ] || continue
+          echo "  $(basename "$r")/$rel  ($why, held $d)"
+        done < <(head -10 "$M")
+        [ "$N" -gt 10 ] && echo "  … and $((N - 10)) more"
+        echo "session-start: if the gate was wrong, commit it deliberately on $DEV; otherwise gitignore it or move it out."
+      done
+    fi
   fi
 
   git rev-parse --git-dir &>/dev/null || return 0
@@ -166,20 +217,10 @@ main() {
     # Cached per remote URL: one `gh` call a week per repo, and only when untracked
     # files actually exist. Unknown visibility stays SILENT — a repo with no GitHub
     # remote, or no `gh` auth, must not warn on every session.
-    VURL="$(git -C "$CWD" remote get-url origin 2>/dev/null)"
-    VIS=""
-    if [ -n "$VURL" ]; then
-      VDIR="$HOME/.cache/claude-repo-visibility"
-      VKEY="$(printf '%s' "$VURL" | md5sum | cut -c1-16)"
-      VFILE="$VDIR/$VKEY"
-      if [ -f "$VFILE" ] && [ -z "$(find "$VFILE" -mtime +7 2>/dev/null)" ]; then
-        VIS="$(cat "$VFILE" 2>/dev/null)"
-      else
-        VSLUG="$(printf '%s' "$VURL" | sed -E 's|^.*github\.com[:/]||; s|\.git$||')"
-        VIS="$(timeout 5 gh api "repos/$VSLUG" --jq '.visibility' 2>/dev/null || true)"
-        [ -n "$VIS" ] && { mkdir -p "$VDIR"; printf '%s' "$VIS" > "$VFILE"; }
-      fi
-    fi
+    # The lookup itself lives in repo-visibility.sh, shared with the SessionEnd
+    # public-repo gate: this canary warns about precisely what that gate refuses to
+    # publish, so the two must never disagree about what "public" means.
+    VIS="$("$DOTFILES/scripts/repo-visibility.sh" "$CWD")"
     if [ "$VIS" = "public" ]; then
       UN="$(printf '%s\n' "$UNTRACKED" | grep -c '')"
       echo "session-start: WARNING — $(basename "$CWD") is a PUBLIC repo and has $UN untracked file(s) that SessionEnd will commit and PUSH:"

@@ -83,6 +83,11 @@ if [ -n "$CWD" ]; then
     [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
   done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
 
+  # PUBLIC-REPO GATE — same as SessionEnd's rule 5. A compact commits and pushes
+  # just like a session end, so it is exactly as capable of publishing a secret.
+  GATE_RESULT="$("$DOTFILES/public-gate.sh" "$CWD" 2>&1)"
+  if [ -n "$GATE_RESULT" ]; then printf '%s\n' "$GATE_RESULT" | tee -a "$DEBUG_LOG"; fi
+
   # No "did we commit?" flag: the pusher decides from the branch being ahead of its
   # upstream, which also retries whatever an earlier killed run stranded.
   if ! git -C "$CWD" diff --staged --quiet; then

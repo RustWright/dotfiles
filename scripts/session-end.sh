@@ -33,6 +33,11 @@
 #      2026-09-03 that published a private workspace transcript to the PUBLIC
 #      dotfiles repo. Never resolve the repo from `pwd`, and never from the hook
 #      JSON's `cwd` field either — that one follows `cd` too, by design.
+#   5. A PUBLIC repo never auto-publishes a NEW sensitive-looking file. public-gate.sh
+#      unstages those between the staging and the commit, and records each one in a
+#      DEVICE-KEYED manifest under ~/.claude/state/held-back/ so SessionStart reports
+#      it on every machine — a hold-back visible only where it fired is a silent loss
+#      on the device you then walk away from.
 
 DEBUG_LOG="/tmp/claude-session-end-debug.log"
 echo "=== SessionEnd: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
@@ -124,6 +129,14 @@ if [ -n "$CWD" ]; then
   while IFS= read -r sub; do
     [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
   done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
+
+  # Rule 5: in a PUBLIC repo, unstage NEW files that look sensitive before they can
+  # be committed and pushed. Runs after the staging above and before the commit
+  # below, so the gate sees exactly what would ship. See public-gate.sh for why this
+  # is a narrow content gate and not `git add -u` (measured: -u would have cost 142
+  # wanted files to stop 1 unwanted one, and it half-applies renames).
+  GATE_RESULT="$("$DOTFILES/public-gate.sh" "$CWD" 2>&1)"
+  if [ -n "$GATE_RESULT" ]; then printf '%s\n' "$GATE_RESULT" | tee -a "$DEBUG_LOG"; fi
 
   # No "did we commit?" flag is kept: the pusher decides what to push from the branch
   # actually being ahead of its upstream, which also retries whatever an earlier
