@@ -128,6 +128,23 @@ main() {
     echo "session-start: WARNING — pull failed in $CWD (likely an unpushed local commit conflicting with the remote). Rolled back to a clean state; you are working from STALE code. Fix by hand: git -C $CWD pull --rebase"
   fi
 
+  # ── canary: commits that never reached the remote ───────────────────────────
+  # Nothing used to report this, and the pull above actively MASKS it: with nothing
+  # to fetch it prints "Current branch main is up to date." while the branch is
+  # ahead. That is precisely how a week of dropped SessionEnd pushes went unnoticed
+  # (2026-09-03: ~/life ahead 1, productive_learning ahead 1 from a session two
+  # hours earlier). session-push.sh now retries an ahead branch on its own, so
+  # anything still reported here has failed at least twice — worth a human look.
+  #
+  # Deliberately VISIBILITY, NOT AUTOMATION, matching the doctrine in session-end.sh:
+  # auto-pushing at session start is still an open user decision (see NEXT.md).
+  for R in "$CWD" "$STATE"; do
+    [ -n "$R" ] && [ -d "$R/.git" ] || continue
+    A="$(git -C "$R" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
+    [ "${A:-0}" -gt 0 ] || continue
+    echo "session-start: WARNING — $R has $A commit(s) NOT on the remote. They will not reach your other device. Check /tmp/claude-session-end-debug.log for the failure, then: git -C $R pull --rebase && git -C $R push"
+  done
+
   # Gently advance submodules: fetch + ff the clean ones, skip dirty ones.
   git -C "$CWD" submodule --quiet foreach '
     if [ -z "$(git status --porcelain)" ]; then

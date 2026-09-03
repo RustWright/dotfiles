@@ -8,11 +8,12 @@
 # submodule pointer bumps (same safety invariant as session-end.sh — a pointer
 # bump is an integration action, never a side effect of a checkpoint).
 #
-# Shares session-end.sh's rule 3 — EVERY LOCAL STEP BEFORE EVERY NETWORK STEP —
-# and shared the same defect until 2026-08-31: the mirror and the repo commit sat
-# below the claude-state push, so a hook killed in that push checkpointed nothing.
-# This path is *more* exposed than SessionEnd, not less: a compact is where big
-# multi-sitting work and device handoffs get their only durable snapshot.
+# Shares session-end.sh's rule 3 and shared its defects: until 2026-08-31 the mirror
+# and the repo commit sat below the claude-state push, so a hook killed in that push
+# checkpointed nothing. Since 2026-09-03 the rule is enforced structurally rather than
+# by ordering — this script does LOCAL work only and hands the whole network phase to
+# session-push.sh. This path is *more* exposed than SessionEnd, not less: a compact is
+# where big multi-sitting work and device handoffs get their only durable snapshot.
 
 DEBUG_LOG="/tmp/claude-session-compact-debug.log"
 echo "=== PreCompact: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
@@ -43,7 +44,6 @@ fi
 # Rule 3 (see the header). The CWD guard is DUPLICATED as an `if` rather than
 # moved up as an early exit, so a session launched outside a checkout still
 # reaches the memory sync below.
-COMMITTED=0
 if [ -n "$CWD" ]; then
   # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
   # tracked parent dirs.
@@ -51,6 +51,14 @@ if [ -n "$CWD" ]; then
   if [ -z "$PARENT" ]; then
     [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
     [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
+  else
+    # Submodule session: same mirror into the PARENT's tracked dirs, then STAGED.
+    # Local, so rule 3 puts it here; the pusher commits and pushes it. It never
+    # bumps the parent's POINTER — a compact is a checkpoint, not an integration.
+    PROJECT="$(basename "$CWD")"
+    [ -d "$CWD/.log" ] && { mkdir -p "$PARENT/logs/$PROJECT"; cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true; }
+    [ -d "$CWD/.curiosities" ] && { mkdir -p "$PARENT/curiosities/$PROJECT"; cp -r "$CWD/.curiosities/." "$PARENT/curiosities/$PROJECT/" 2>/dev/null || true; }
+    git -C "$PARENT" add -- "logs/$PROJECT" "curiosities/$PROJECT" 2>/dev/null || true
   fi
 
   # Stage WIP, then unstage every submodule path before committing.
@@ -59,9 +67,10 @@ if [ -n "$CWD" ]; then
     [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
   done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
 
+  # No "did we commit?" flag: the pusher decides from the branch being ahead of its
+  # upstream, which also retries whatever an earlier killed run stranded.
   if ! git -C "$CWD" diff --staged --quiet; then
     git -C "$CWD" commit -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')"
-    COMMITTED=1
   fi
 
   # Visibility, NOT automation — see the long note in session-end.sh. A parent
@@ -77,40 +86,32 @@ if [ -n "$CWD" ]; then
   fi
 fi
 
-# ── cross-device state: memory notes + saved plans (the claude-state repo) ────
+# ── LOCAL: commit memory notes + saved plans (the claude-state repo) ──────────
 # Runs regardless of whether we are in a checkout — memory belongs to the
 # session, not the work repo, so it must sync even when Claude was launched
 # outside one. None of the submodule-pointer rules apply here: this repo has no
 # submodules, so `add -A` is safe. Non-fatal like every other sync step.
-# Every push is BOUNDED so a hang costs seconds, never the rest of the script.
+# The COMMIT is here; the push is not. See the detach note below.
 STATE="$HOME/.claude"
 if [ -d "$STATE/.git" ]; then
   git -C "$STATE" add -A 2>/dev/null || true
-  git -C "$STATE" diff --staged --quiet 2>/dev/null || {
+  git -C "$STATE" diff --staged --quiet 2>/dev/null || \
     git -C "$STATE" commit -q -m "auto: compact checkpoint $(date '+%Y-%m-%d %H:%M')" 2>/dev/null || true
-    timeout 30 git -C "$STATE" push -q 2>/dev/null || echo "WARNING: claude-state push FAILED or timed out — memory is committed locally but NOT synced. Fix: git -C $STATE pull --rebase && git -C $STATE push"
-  }
 fi
 
-[ -z "$CWD" ] && exit 0
+# ── NETWORK: handed to a DETACHED process; this hook is now done ──────────────
+# The same session-push.sh that SessionEnd uses, in `compact` mode: it pushes but
+# never advances the parent's submodule POINTER, preserving the invariant that a
+# checkpoint is not an integration (run sync_pointers.py for that, deliberately).
+#
+# PreCompact is not a shutdown, so it is not exposed to the kill that forced this
+# split in session-end.sh — but sharing the pusher removes a duplicated network
+# tail that had already drifted, routes push failures into the debug log instead of
+# a stdout nobody reads, and stops a compact blocking the user on three pushes.
+#
+# `--fork` with no trailing `&` — see the note in session-end.sh: a backgrounded
+# `setsid ... &` leaves the child in this process group until setsid() runs, and a
+# kill landing in that window takes it down with the hook.
+setsid --fork "$DOTFILES/session-push.sh" "$CWD" compact </dev/null >>"$DEBUG_LOG" 2>&1
 
-# ── NETWORK: push the checkpoint committed above ──────────────────────────────
-# Split from its commit on purpose (rule 3). Also pushes when an EARLIER run
-# committed but died before pushing — the state a killed hook leaves behind.
-AHEAD="$(git -C "$CWD" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
-if [ "$COMMITTED" = 1 ] || [ "${AHEAD:-0}" -gt 0 ]; then
-  timeout 30 git -C "$CWD" push 2>/dev/null || echo "WARNING: push FAILED or timed out in $CWD — work is committed locally but NOT on the remote (usually the branch moved on another device). Fix: git -C $CWD pull --rebase && git -C $CWD push"
-fi
-
-# Submodule session: copy logs + curiosities to the parent (pointer bump stays
-# deliberate — run sync_pointers.py to integrate, never automatically on a checkpoint).
-if [ -n "$PARENT" ]; then
-  PROJECT="$(basename "$CWD")"
-  [ -d "$CWD/.log" ] && { mkdir -p "$PARENT/logs/$PROJECT"; cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true; }
-  [ -d "$CWD/.curiosities" ] && { mkdir -p "$PARENT/curiosities/$PROJECT"; cp -r "$CWD/.curiosities/." "$PARENT/curiosities/$PROJECT/" 2>/dev/null || true; }
-  git -C "$PARENT" add -- "logs/$PROJECT" "curiosities/$PROJECT" 2>/dev/null || true
-  git -C "$PARENT" diff --staged --quiet || {
-    git -C "$PARENT" commit -m "auto: compact log sync $PROJECT $(date '+%Y-%m-%d %H:%M')"
-    timeout 30 git -C "$PARENT" push 2>/dev/null || echo "WARNING: parent push FAILED or timed out in $PARENT — pointer/log commit is local only. Fix: git -C $PARENT pull --rebase && git -C $PARENT push"
-  }
-fi
+exit 0
