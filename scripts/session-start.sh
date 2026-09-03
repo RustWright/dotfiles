@@ -174,10 +174,20 @@ main() {
   CWD="$(git rev-parse --show-toplevel)"
 
   # Pull the current repo; autostash keeps any uncommitted work out of the way.
-  if ! git -C "$CWD" pull --rebase --autostash 2>/dev/null; then
-    git -C "$CWD" rebase --abort 2>/dev/null || true
-    echo "session-start: WARNING — pull failed in $CWD (likely an unpushed local commit conflicting with the remote). Rolled back to a clean state; you are working from STALE code. Fix by hand: git -C $CWD pull --rebase"
-  fi
+  #
+  # Under the SAME per-repo lock session-work.sh takes, and this is now REQUIRED. The
+  # SessionEnd body runs DETACHED, so the previous session's staging and commit can still
+  # be in flight when this one starts — on 2026-09-03 a new session started in omni-me
+  # SEVEN SECONDS after the previous SessionEnd fired. `pull --rebase --autostash` takes
+  # .git/index.lock; unserialised, the two abort each other and one loses its work.
+  # Bounded wait, and we proceed anyway: a stuck holder must not block the session.
+  {
+    flock -w 60 9 || echo "session-start: NOTE — waited on a previous session's commit in $CWD and gave up; if the pull below misbehaves, that is why."
+    if ! git -C "$CWD" pull --rebase --autostash 2>/dev/null; then
+      git -C "$CWD" rebase --abort 2>/dev/null || true
+      echo "session-start: WARNING — pull failed in $CWD (likely an unpushed local commit conflicting with the remote). Rolled back to a clean state; you are working from STALE code. Fix by hand: git -C $CWD pull --rebase"
+    fi
+  } 9>"/tmp/claude-session-work.$(printf '%s' "$CWD" | md5sum | cut -c1-16).lock"
 
   # ── canary: commits that never reached the remote ───────────────────────────
   # Nothing used to report this, and the pull above actively MASKS it: with nothing
@@ -212,33 +222,48 @@ main() {
   # Visibility, NOT automation (user's decision, 2026-09-03): this reports so the
   # human can gitignore / commit deliberately / move the file out. It never alters
   # what any hook commits or pushes.
+  # The lookup runs UNCONDITIONALLY; only the warning is conditional. It is cached per
+  # remote URL for 7 days, so this costs one `gh` call per repo per week — and paying it
+  # HERE is what keeps the SessionEnd gate off the network.
+  #
+  # It used to sit behind the untracked-files guard below, and that is exactly how
+  # 2026-09-03 was lost: omni-me had never been looked up, so public-gate.sh made the
+  # first call itself — a cold, blocking `gh api` wedged between the staging and the
+  # commit, mid-shutdown, with a ~1s budget. The hook died there and the session's whole
+  # day of work sat staged and uncommitted. Warm the cache when there is time to spare.
+  #
+  # Unknown visibility stays SILENT — a repo with no GitHub remote, or a device with no
+  # `gh` auth, must not warn on every session. The lookup lives in repo-visibility.sh,
+  # shared with the gate, so the two can never disagree about what "public" means.
+  VIS="$("$DOTFILES/scripts/repo-visibility.sh" "$CWD")"
+
   UNTRACKED="$(git -C "$CWD" ls-files --others --exclude-standard 2>/dev/null)"
-  if [ -n "$UNTRACKED" ]; then
-    # Cached per remote URL: one `gh` call a week per repo, and only when untracked
-    # files actually exist. Unknown visibility stays SILENT — a repo with no GitHub
-    # remote, or no `gh` auth, must not warn on every session.
-    # The lookup itself lives in repo-visibility.sh, shared with the SessionEnd
-    # public-repo gate: this canary warns about precisely what that gate refuses to
-    # publish, so the two must never disagree about what "public" means.
-    VIS="$("$DOTFILES/scripts/repo-visibility.sh" "$CWD")"
-    if [ "$VIS" = "public" ]; then
-      UN="$(printf '%s\n' "$UNTRACKED" | grep -c '')"
-      echo "session-start: WARNING — $(basename "$CWD") is a PUBLIC repo and has $UN untracked file(s) that SessionEnd will commit and PUSH:"
-      printf '%s\n' "$UNTRACKED" | head -10 | sed 's|^|  |'
-      [ "$UN" -gt 10 ] && echo "  … and $((UN - 10)) more"
-      echo "session-start: gitignore them, commit them deliberately, or move them out before this session ends."
-    fi
+  if [ -n "$UNTRACKED" ] && [ "$VIS" = "public" ]; then
+    UN="$(printf '%s\n' "$UNTRACKED" | grep -c '')"
+    echo "session-start: WARNING — $(basename "$CWD") is a PUBLIC repo and has $UN untracked file(s) that SessionEnd will commit and PUSH:"
+    printf '%s\n' "$UNTRACKED" | head -10 | sed 's|^|  |'
+    [ "$UN" -gt 10 ] && echo "  … and $((UN - 10)) more"
+    echo "session-start: gitignore them, commit them deliberately, or move them out before this session ends."
   fi
 
   # Gently advance submodules: fetch + ff the clean ones, skip dirty ones.
-  git -C "$CWD" submodule --quiet foreach '
+  #
+  # The skip list doubles as the stranded-work canary. session-work.sh prints the same
+  # thing at SessionEnd, but that is a moment nobody is reading — and since the body was
+  # detached, it goes to the debug log only. THIS is the copy that gets read, and it
+  # arrives at the one time it can still be acted on: the start of the next session.
+  SUBOUT="$(git -C "$CWD" submodule --quiet foreach '
     if [ -z "$(git status --porcelain)" ]; then
       git fetch --quiet 2>/dev/null || true
       git merge --ff-only "@{u}" 2>/dev/null || true
     else
       echo "session-start: skipping dirty submodule $sm_path (work in flight)"
     fi
-  ' 2>/dev/null || true
+  ' 2>/dev/null || true)"
+  if [ -n "$SUBOUT" ]; then
+    printf '%s\n' "$SUBOUT"
+    echo "session-start: a parent session NEVER commits a submodule's tree, so that work will not reach your other device. Commit from inside the submodule, or run the session there."
+  fi
 
   # ── instant-resume handoff: NEXT.md ─────────────────────────────────────────
   # PRINTED, not merely pointed at. SessionStart stdout is injected into the

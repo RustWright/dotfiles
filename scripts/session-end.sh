@@ -1,212 +1,63 @@
 #!/bin/bash
-# SessionEnd hook: file the readable session log, commit work in the current repo
-# (never sweeping submodule pointers), and — inside a submodule — sync logs to the
-# parent and record the submodule pointer ONLY if it is already pushed.
+# SessionEnd hook — a LAUNCHER. The work lives in session-work.sh.
 #
-# Four independent safety rules, all learned the hard way:
-#   1. A root/parent session must NOT auto-commit submodule pointer bumps. A bare
-#      `git add -A` in the parent stages every dirty gitlink, recording a pointer
-#      to an unpushed (or unrelated, in-flight) submodule commit — a dangling
-#      gitlink that breaks fresh clones and `submodule update`. So we stage work
-#      but then unstage every submodule path before committing.
-#   2. A submodule session MAY advance the parent's pointer, but only when that
-#      submodule HEAD is already on its remote (else the same dangling gitlink).
-#      That guarded bump is a deliberate integration; the sweep in rule 1 is not.
-#   3. THIS HOOK DOES LOCAL WORK ONLY. It is killed when it outlives the CLI's
-#      shutdown grace, and it always dies inside a push. Ordering alone cannot fix
-#      that — it was tried twice and moved the failure both times. On 2026-08-30
-#      the pushes ran first and cost six session logs; hoisting the log filing left
-#      the kill one step lower, and on 2026-08-31 it landed on the repo commit,
-#      leaving NEXT.md written but UNCOMMITTED. On 2026-09-03 all local work was
-#      above all network work, yet TWO pushes remained in series with the work repo
-#      second: the hook died in the claude-state push and a ~/life commit had to be
-#      pushed by hand. Every ordering leaves something after the first push.
-#      So the network phase is no longer in this process at all — it is handed to
-#      session-push.sh under `setsid` at the bottom of this file. Local work is
-#      cheap and unrecoverable-if-skipped, so it stays synchronous here; pushes are
-#      expensive, always retryable, and now outlive the hook. Do not re-pair a
-#      commit with a push, and do not move a push back into this script.
-#   4. THE SESSION'S REPO IS $CLAUDE_PROJECT_DIR, NOT THE SHELL'S CWD. The Bash
-#      tool carries one cwd across a whole session, so a `cd` anywhere leaks into
-#      this hook. Deriving the repo from it means a parent session that stepped
-#      into a submodule gets filed, committed and PUSHED as that submodule. On
-#      2026-09-03 that published a private workspace transcript to the PUBLIC
-#      dotfiles repo. Never resolve the repo from `pwd`, and never from the hook
-#      JSON's `cwd` field either — that one follows `cd` too, by design.
-#   5. A PUBLIC repo never auto-publishes a NEW sensitive-looking file. public-gate.sh
-#      unstages those between the staging and the commit, and records each one in a
-#      DEVICE-KEYED manifest under ~/.claude/state/held-back/ so SessionStart reports
-#      it on every machine — a hold-back visible only where it fired is a silent loss
-#      on the device you then walk away from.
+# ── WHY THIS FILE IS NINE LINES LONG ─────────────────────────────────────────────
+# This hook is killed roughly ONE SECOND after it starts, wherever it happens to be.
+# That is the real invariant, and it took four recurrences to see it, because each fix
+# named the place the previous failure had landed:
+#
+#   2026-08-30  "it dies in the push"        → moved the pushes below the log filing.
+#                                              Cost: six session logs.
+#   2026-08-31  "it dies in the push"        → hoisted all filing above all pushes.
+#                                              Cost: NEXT.md written but UNCOMMITTED.
+#   2026-09-03  "it dies in the FIRST push"  → detached the network phase (af69170).
+#                                              Cost: the work repo left unpushed.
+#   2026-09-03  and then it died in the LOCAL phase, which that fix had declared safe:
+#               an omni-me session filed its log at 18:38:36.664, staged both repos, and
+#               was killed inside public-gate.sh before ever reaching the commit.
+#
+# Three orderings and one partial detach, each moving the failure one step. Nothing that
+# remains in this hook's lifetime is safe, however cheap it looks — the 18:38 run spent
+# 0.65s of its budget just rendering a 4MB transcript, and the run at 12:29:09 the same
+# day died in `timeout 2 cat` before filing anything at all.
+#
+# So the hook now hands EVERYTHING off and exits. `setsid --fork` puts the worker in a
+# new session and process group, which a process-group kill aimed at this hook cannot
+# reach. Both halves of that invocation are load-bearing, and both are old lessons:
+#   - `--fork` guarantees setsid forks rather than exec'ing in place (which would block
+#     this hook and defeat the whole point).
+#   - NO trailing `&`. A backgrounded `setsid ... &` forks a subshell that still belongs
+#     to THIS process group until setsid() actually runs; a kill in that window takes the
+#     worker with it. Measured 2026-09-03: with `&` the child was killed before it
+#     started; with `--fork` it survived its launcher being SIGKILLed.
+#   - NO `</dev/null`. The worker must INHERIT fd 0 to read the hook JSON after this
+#     process is gone. If it comes back empty the worker falls back to the newest
+#     transcript for the repo, so this is a soft dependency, not a hard one.
+#
+# DO NOT move work back up here. The next thing left in this hook is the next thing lost.
 
 DEBUG_LOG="/tmp/claude-session-end-debug.log"
 echo "=== SessionEnd: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ── which repo does this session belong to? ANCHOR, never the inherited cwd ───
-# Rule 4. The Bash tool keeps ONE shell cwd for a whole session, so a `cd` in any
-# command persists into the hook. On 2026-09-03 a *parent* session's last command
-# was `cd setup_files/dotfiles && git pull` to bump the pointer; the bare
-# `git rev-parse` that used to live below read that leftover cwd, concluded the
-# session had belonged to the dotfiles SUBMODULE, and every step downstream
-# inherited the lie: the transcript was filed into dotfiles/.log, mirrored to
-# logs/dotfiles/, committed (dotfiles had no .log/ ignore rule) and PUSHED — to a
-# PUBLIC repo. One stale `cd` published a private workspace transcript.
+# ── which repo does this session belong to? ANCHOR, never the inherited cwd ──────
+# The Bash tool keeps ONE shell cwd for a whole session, so a `cd` in any command
+# persists into this hook. On 2026-09-03 a parent session's last command was
+# `cd setup_files/dotfiles && git pull`; the bare `git rev-parse` that used to live here
+# read that leftover cwd, concluded the session belonged to the dotfiles SUBMODULE, and
+# every step downstream inherited the lie — a private workspace transcript was filed,
+# committed and PUSHED to a PUBLIC repo.
 #
-# $CLAUDE_PROJECT_DIR is documented as "the project root where the session
-# started" and explicitly "stays put" when Claude changes directory. The hook
-# JSON's `cwd` field is NOT a substitute — the docs say it "follows Claude … and
-# the new directory after Claude runs `cd`", i.e. the identical wrong value.
-# Fall back to pwd only if the variable is absent, and record which was used so
-# the fallback can never go unnoticed.
+# $CLAUDE_PROJECT_DIR is documented as "the project root where the session started" and
+# explicitly stays put when Claude changes directory. The hook JSON's `cwd` field is NOT
+# a substitute — the docs say it follows Claude and reports the directory after a `cd`,
+# i.e. the identical wrong value. Resolved HERE rather than in the worker so the log
+# records it even if the worker never starts.
 ANCHOR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 [ -d "$ANCHOR" ] || ANCHOR="$(pwd)"
 echo "anchor=$ANCHOR (CLAUDE_PROJECT_DIR=${CLAUDE_PROJECT_DIR:-unset}) pwd=$(pwd)" >> "$DEBUG_LOG"
 
-# The hook hands us JSON on stdin; transcript_path is the authoritative .jsonl for
-# THIS session - more reliable than guessing the newest one in the project dir.
-HOOK_JSON="$(timeout 2 cat 2>/dev/null || true)"
-TRANSCRIPT="$(printf '%s' "$HOOK_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin).get('transcript_path',''))" 2>/dev/null || true)"
-
-# ── file the readable log-so-far (replaces the manual /export ritual) ─────────
-# ORDERING IS LOAD-BEARING: this runs BEFORE any network I/O. It is local, fast,
-# and the only step whose output cannot be reconstructed once the transcript is
-# gone. It used to sit *after* the claude-state sync below, and every session end
-# that had memory to push died inside that push before ever reaching this line —
-# silently losing six session logs on 2026-08-30 (omni-me and the workspace
-# root). The repo guard is DUPLICATED rather than moved, so a session launched
-# outside a checkout still falls through to the memory sync.
-# Capture-then-emit (not `| tee`): a closed stdout must not cost us the debug
-# record. Surface the one-line result to the user; keep full detail in the log.
-CWD=""
-if git -C "$ANCHOR" rev-parse --git-dir &>/dev/null; then
-  CWD="$(git -C "$ANCHOR" rev-parse --show-toplevel)"
-  FILE_RESULT="$(python3 "$DOTFILES/file-session-log.py" --repo "$CWD" --transcript "$TRANSCRIPT" 2>&1)"
-  printf '%s\n' "$FILE_RESULT" >> "$DEBUG_LOG"
-  printf '%s\n' "$FILE_RESULT"
-fi
-
-# ── LOCAL: mirror logs and COMMIT the current repo, before any network I/O ────
-# Rule 3. This whole block used to sit *below* the claude-state push; on
-# 2026-08-31 the hook died in that push and never got here, so the session's
-# NEXT.md was written but never committed. Nothing in here touches the network,
-# so nothing in here can be lost to a killed push.
-# The CWD guard is DUPLICATED as an `if` rather than moved up as an early exit —
-# same reason the log-filing block above duplicates it: a session launched
-# outside a checkout has no repo to commit, but must still reach the memory sync.
-if [ -n "$CWD" ]; then
-  PARENT="$(git -C "$CWD" rev-parse --show-superproject-working-tree 2>/dev/null)"
-
-  # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
-  # tracked parent dirs (same convention the manual protocol used — these dirs are
-  # parent-synced, never committed inside the project).
-  if [ -z "$PARENT" ]; then
-    [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
-    [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
-  else
-    # Submodule session: same mirror, into the PARENT's tracked dirs, then STAGED —
-    # the commit itself waits for the pusher, which combines it with the guarded
-    # pointer bump. Rule 3 puts the copy here: it is local, and it used to sit AFTER
-    # the repo push, where a killed hook dropped it exactly the way 2026-08-30 lost
-    # six session logs. Staged-but-uncommitted is a recoverable end state; not copied
-    # at all is not.
-    PROJECT="$(basename "$CWD")"
-    [ -d "$CWD/.log" ] && { mkdir -p "$PARENT/logs/$PROJECT"; cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true; }
-    [ -d "$CWD/.curiosities" ] && { mkdir -p "$PARENT/curiosities/$PROJECT"; cp -r "$CWD/.curiosities/." "$PARENT/curiosities/$PROJECT/" 2>/dev/null || true; }
-    # TWO adds, not one. `git add -- a b` is ATOMIC: if either pathspec matches
-    # nothing git aborts the whole command and stages NEITHER. Most projects have
-    # no .curiosities/, so `curiosities/$PROJECT` usually does not exist, and the
-    # single combined add was silently staging nothing at all (exit 128, swallowed
-    # by `|| true`) — the mirrored logs then sat untracked until some later root
-    # session's blanket `add -A` happened to sweep them in. Found 2026-09-03.
-    git -C "$PARENT" add -A -- "logs/$PROJECT" 2>/dev/null || true
-    git -C "$PARENT" add -A -- "curiosities/$PROJECT" 2>/dev/null || true
-  fi
-
-  # Stage work, then unstage every submodule path before committing (rule 1).
-  git -C "$CWD" add -A
-  while IFS= read -r sub; do
-    [ -n "$sub" ] && git -C "$CWD" reset -q HEAD -- "$sub" 2>/dev/null || true
-  done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
-
-  # Rule 5: in a PUBLIC repo, unstage NEW files that look sensitive before they can
-  # be committed and pushed. Runs after the staging above and before the commit
-  # below, so the gate sees exactly what would ship. See public-gate.sh for why this
-  # is a narrow content gate and not `git add -u` (measured: -u would have cost 142
-  # wanted files to stop 1 unwanted one, and it half-applies renames).
-  GATE_RESULT="$("$DOTFILES/public-gate.sh" "$CWD" 2>&1)"
-  if [ -n "$GATE_RESULT" ]; then printf '%s\n' "$GATE_RESULT" | tee -a "$DEBUG_LOG"; fi
-
-  # No "did we commit?" flag is kept: the pusher decides what to push from the branch
-  # actually being ahead of its upstream, which also retries whatever an earlier
-  # killed run stranded.
-  if ! git -C "$CWD" diff --staged --quiet; then
-    git -C "$CWD" commit -m "auto: session end $(date '+%Y-%m-%d %H:%M')"
-  fi
-
-  # ── visibility, NOT automation: name the work this session will not commit ──
-  # Git treats a submodule as an opaque gitlink, so the `add -A` above stages only
-  # its POINTER (which rule 1 then unstages) — a submodule's own modified files are
-  # never touched by a parent session. Work edited under projects/<x>/ from a root
-  # session is therefore silently stranded on this device: the session ends
-  # "successfully" and the other device never sees it.
-  # Deliberately a NOTE and not a commit. Committing here would sweep another
-  # repo's in-flight work as a side effect — the exact thing rules 1 and 2 exist to
-  # prevent — and a concurrent session working in that submodule would have its
-  # half-finished staging committed out from under it (observed live 2026-08-31).
-  # The human decides; the hook only makes the boundary visible.
-  if [ -z "$PARENT" ]; then
-    while IFS= read -r sub; do
-      [ -n "$sub" ] || continue
-      [ -e "$CWD/$sub/.git" ] || continue
-      [ -n "$(git -C "$CWD/$sub" status --porcelain 2>/dev/null)" ] || continue
-      printf 'NOTE: %s has uncommitted work — a parent session never commits it, so it will not reach your other device. Commit from inside %s, or let a session running there do it.\n' "$sub" "$sub" | tee -a "$DEBUG_LOG"
-    done < <(git -C "$CWD" config -f .gitmodules --get-regexp '\.path$' 2>/dev/null | awk '{print $2}')
-  fi
-fi
-
-# ── LOCAL: commit memory notes + saved plans (the claude-state repo) ──────────
-# Runs regardless of whether we are in a checkout — memory belongs to the
-# session, not the work repo, so it must sync even when Claude was launched
-# outside one. None of the submodule-pointer rules apply here: this repo has no
-# submodules, so `add -A` is safe. Non-fatal like every other sync step.
-# The COMMIT is here; the push is not. See the detach note below.
-STATE="$HOME/.claude"
-if [ -d "$STATE/.git" ]; then
-  git -C "$STATE" add -A 2>/dev/null || true
-  git -C "$STATE" diff --staged --quiet 2>/dev/null || \
-    git -C "$STATE" commit -q -m "auto: session end $(date '+%Y-%m-%d %H:%M')" 2>/dev/null || true
-fi
-
-# ── NETWORK: handed to a DETACHED process; this hook is now done ──────────────
-# Rule 3 used to be enforced by ORDERING — all local steps above all network steps.
-# That was necessary but never sufficient, because the hook is killed inside its
-# FIRST push, so whatever is sequenced second is a coin flip no matter how the
-# steps are arranged. Two fixes proved it by moving the failure rather than removing
-# it (2026-08-30: six session logs; 2026-08-31: an uncommitted NEXT.md). On
-# 2026-09-03 it landed lower again: two pushes remained in series with the WORK repo
-# second, the hook died in the claude-state push, and a ~/life session's commit had to
-# be pushed by hand. Tell-tale: the claude-state remote HAD the commit while the local
-# remote-tracking ref did not — a push killed between the server accepting the ref and
-# the client recording it.
-#
-# So the network phase no longer runs in this process at all. `setsid` puts the pusher
-# in a new session and process group, which a process-group kill aimed at this hook
-# cannot reach; redirecting all three fds keeps it from holding the terminal open.
-# Everything above stays synchronous — local work is unrecoverable if skipped, and
-# cheap enough that it always completes inside the grace.
-#
-# `--fork` with NO trailing `&`, and both halves matter. A backgrounded `setsid ... &`
-# forks a subshell that still belongs to THIS process group until setsid() actually
-# runs, so a kill arriving in that window takes the pusher down with the hook — the
-# very failure this is meant to end. Measured 2026-09-03: with `&` the child was killed
-# before it ever started; with `--fork` it landed in its own session (own sid+pgid,
-# reparented to init) and completed after its launcher was SIGKILLed. `--fork` also
-# guarantees setsid forks rather than exec'ing in place, which would block this hook.
-#
-# DO NOT re-inline this, and do not "simplify" it back into a push here. The ordering
-# fix has been attempted twice and moved the failure both times.
-setsid --fork "$DOTFILES/session-push.sh" "$CWD" end </dev/null >>"$DEBUG_LOG" 2>&1
+setsid --fork "$DOTFILES/session-work.sh" end "$ANCHOR" >>"$DEBUG_LOG" 2>&1
 
 exit 0

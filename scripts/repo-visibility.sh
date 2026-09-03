@@ -30,7 +30,11 @@ if [ -f "$VFILE" ] && [ -z "$(find "$VFILE" -mtime +7 2>/dev/null)" ]; then
 fi
 
 VSLUG="$(printf '%s' "$VURL" | sed -E 's|^.*github\.com[:/]||; s|\.git$||')"
-VIS="$(timeout 5 gh api "repos/$VSLUG" --jq '.visibility' 2>/dev/null || true)"
+# `-k 2`, not a bare `timeout 5`: plain timeout sends SIGTERM and then waits FOREVER for
+# a child that blocks or ignores it, so the "5 second" bound was not a bound at all. The
+# SessionEnd hook was killed inside this call on 2026-09-03 with nothing cached, which is
+# exactly what an unbounded wait looks like from the outside. SIGKILL two seconds later.
+VIS="$(timeout -k 2 5 gh api "repos/$VSLUG" --jq '.visibility' 2>/dev/null || true)"
 [ -n "$VIS" ] && { mkdir -p "$VDIR"; printf '%s' "$VIS" > "$VFILE"; }
 
 printf '%s' "$VIS"
