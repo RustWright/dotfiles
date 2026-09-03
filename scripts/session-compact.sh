@@ -20,6 +20,18 @@ echo "=== PreCompact: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Anchor the session's repo on where the session STARTED, never the shell's cwd —
+# session-end.sh rule 4, and the identical defect lived here. The Bash tool keeps
+# one cwd per session, so a `cd` in any command leaks into this hook; deriving the
+# repo from it makes a parent session that stepped into a submodule check point as
+# that submodule. $CLAUDE_PROJECT_DIR is documented to stay at the session's start
+# directory; the hook JSON's `cwd` field follows `cd` and is no help. PreCompact is
+# MORE exposed than SessionEnd here, not less: a compact is often a big multi-sitting
+# checkpoint, so a misfiled one loses more.
+ANCHOR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+[ -d "$ANCHOR" ] || ANCHOR="$(pwd)"
+echo "anchor=$ANCHOR (CLAUDE_PROJECT_DIR=${CLAUDE_PROJECT_DIR:-unset}) pwd=$(pwd)" >> "$DEBUG_LOG"
+
 # The hook hands us JSON on stdin; transcript_path is the authoritative .jsonl for
 # THIS session - more reliable than guessing the newest one in the project dir.
 HOOK_JSON="$(timeout 2 cat 2>/dev/null || true)"
@@ -33,8 +45,8 @@ TRANSCRIPT="$(printf '%s' "$HOOK_JSON" | python3 -c "import json,sys; print(json
 # Capture-then-emit (not `| tee`) so a closed stdout cannot cost us the record;
 # surface the one-line result (filed/skipped) to the user, full detail in the log.
 CWD=""
-if git rev-parse --git-dir &>/dev/null; then
-  CWD="$(git rev-parse --show-toplevel)"
+if git -C "$ANCHOR" rev-parse --git-dir &>/dev/null; then
+  CWD="$(git -C "$ANCHOR" rev-parse --show-toplevel)"
   FILE_RESULT="$(python3 "$DOTFILES/file-session-log.py" --repo "$CWD" --transcript "$TRANSCRIPT" 2>&1)"
   printf '%s\n' "$FILE_RESULT" >> "$DEBUG_LOG"
   printf '%s\n' "$FILE_RESULT"
@@ -47,7 +59,7 @@ fi
 if [ -n "$CWD" ]; then
   # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
   # tracked parent dirs.
-  PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
+  PARENT="$(git -C "$CWD" rev-parse --show-superproject-working-tree 2>/dev/null)"
   if [ -z "$PARENT" ]; then
     [ -d "$CWD/.log" ] && { mkdir -p "$CWD/logs/root"; cp -r "$CWD/.log/." "$CWD/logs/root/" 2>/dev/null || true; }
     [ -d "$CWD/.curiosities" ] && { mkdir -p "$CWD/curiosities/root"; cp -r "$CWD/.curiosities/." "$CWD/curiosities/root/" 2>/dev/null || true; }
@@ -58,7 +70,11 @@ if [ -n "$CWD" ]; then
     PROJECT="$(basename "$CWD")"
     [ -d "$CWD/.log" ] && { mkdir -p "$PARENT/logs/$PROJECT"; cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true; }
     [ -d "$CWD/.curiosities" ] && { mkdir -p "$PARENT/curiosities/$PROJECT"; cp -r "$CWD/.curiosities/." "$PARENT/curiosities/$PROJECT/" 2>/dev/null || true; }
-    git -C "$PARENT" add -- "logs/$PROJECT" "curiosities/$PROJECT" 2>/dev/null || true
+    # TWO adds, not one — `git add -- a b` is atomic, so a missing
+    # curiosities/$PROJECT aborted the whole command and staged neither. See the
+    # longer note at the same spot in session-end.sh.
+    git -C "$PARENT" add -A -- "logs/$PROJECT" 2>/dev/null || true
+    git -C "$PARENT" add -A -- "curiosities/$PROJECT" 2>/dev/null || true
   fi
 
   # Stage WIP, then unstage every submodule path before committing.

@@ -3,7 +3,7 @@
 # (never sweeping submodule pointers), and — inside a submodule — sync logs to the
 # parent and record the submodule pointer ONLY if it is already pushed.
 #
-# Three independent safety rules, all learned the hard way:
+# Four independent safety rules, all learned the hard way:
 #   1. A root/parent session must NOT auto-commit submodule pointer bumps. A bare
 #      `git add -A` in the parent stages every dirty gitlink, recording a pointer
 #      to an unpushed (or unrelated, in-flight) submodule commit — a dangling
@@ -26,11 +26,38 @@
 #      cheap and unrecoverable-if-skipped, so it stays synchronous here; pushes are
 #      expensive, always retryable, and now outlive the hook. Do not re-pair a
 #      commit with a push, and do not move a push back into this script.
+#   4. THE SESSION'S REPO IS $CLAUDE_PROJECT_DIR, NOT THE SHELL'S CWD. The Bash
+#      tool carries one cwd across a whole session, so a `cd` anywhere leaks into
+#      this hook. Deriving the repo from it means a parent session that stepped
+#      into a submodule gets filed, committed and PUSHED as that submodule. On
+#      2026-09-03 that published a private workspace transcript to the PUBLIC
+#      dotfiles repo. Never resolve the repo from `pwd`, and never from the hook
+#      JSON's `cwd` field either — that one follows `cd` too, by design.
 
 DEBUG_LOG="/tmp/claude-session-end-debug.log"
 echo "=== SessionEnd: $(date) PWD=$(pwd) ===" >> "$DEBUG_LOG"
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── which repo does this session belong to? ANCHOR, never the inherited cwd ───
+# Rule 4. The Bash tool keeps ONE shell cwd for a whole session, so a `cd` in any
+# command persists into the hook. On 2026-09-03 a *parent* session's last command
+# was `cd setup_files/dotfiles && git pull` to bump the pointer; the bare
+# `git rev-parse` that used to live below read that leftover cwd, concluded the
+# session had belonged to the dotfiles SUBMODULE, and every step downstream
+# inherited the lie: the transcript was filed into dotfiles/.log, mirrored to
+# logs/dotfiles/, committed (dotfiles had no .log/ ignore rule) and PUSHED — to a
+# PUBLIC repo. One stale `cd` published a private workspace transcript.
+#
+# $CLAUDE_PROJECT_DIR is documented as "the project root where the session
+# started" and explicitly "stays put" when Claude changes directory. The hook
+# JSON's `cwd` field is NOT a substitute — the docs say it "follows Claude … and
+# the new directory after Claude runs `cd`", i.e. the identical wrong value.
+# Fall back to pwd only if the variable is absent, and record which was used so
+# the fallback can never go unnoticed.
+ANCHOR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+[ -d "$ANCHOR" ] || ANCHOR="$(pwd)"
+echo "anchor=$ANCHOR (CLAUDE_PROJECT_DIR=${CLAUDE_PROJECT_DIR:-unset}) pwd=$(pwd)" >> "$DEBUG_LOG"
 
 # The hook hands us JSON on stdin; transcript_path is the authoritative .jsonl for
 # THIS session - more reliable than guessing the newest one in the project dir.
@@ -48,8 +75,8 @@ TRANSCRIPT="$(printf '%s' "$HOOK_JSON" | python3 -c "import json,sys; print(json
 # Capture-then-emit (not `| tee`): a closed stdout must not cost us the debug
 # record. Surface the one-line result to the user; keep full detail in the log.
 CWD=""
-if git rev-parse --git-dir &>/dev/null; then
-  CWD="$(git rev-parse --show-toplevel)"
+if git -C "$ANCHOR" rev-parse --git-dir &>/dev/null; then
+  CWD="$(git -C "$ANCHOR" rev-parse --show-toplevel)"
   FILE_RESULT="$(python3 "$DOTFILES/file-session-log.py" --repo "$CWD" --transcript "$TRANSCRIPT" 2>&1)"
   printf '%s\n' "$FILE_RESULT" >> "$DEBUG_LOG"
   printf '%s\n' "$FILE_RESULT"
@@ -64,7 +91,7 @@ fi
 # same reason the log-filing block above duplicates it: a session launched
 # outside a checkout has no repo to commit, but must still reach the memory sync.
 if [ -n "$CWD" ]; then
-  PARENT="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
+  PARENT="$(git -C "$CWD" rev-parse --show-superproject-working-tree 2>/dev/null)"
 
   # Root/parent session: mirror the gitignored .log/ + .curiosities/ into their
   # tracked parent dirs (same convention the manual protocol used — these dirs are
@@ -82,7 +109,14 @@ if [ -n "$CWD" ]; then
     PROJECT="$(basename "$CWD")"
     [ -d "$CWD/.log" ] && { mkdir -p "$PARENT/logs/$PROJECT"; cp -r "$CWD/.log/." "$PARENT/logs/$PROJECT/" 2>/dev/null || true; }
     [ -d "$CWD/.curiosities" ] && { mkdir -p "$PARENT/curiosities/$PROJECT"; cp -r "$CWD/.curiosities/." "$PARENT/curiosities/$PROJECT/" 2>/dev/null || true; }
-    git -C "$PARENT" add -A -- "logs/$PROJECT" "curiosities/$PROJECT" 2>/dev/null || true
+    # TWO adds, not one. `git add -- a b` is ATOMIC: if either pathspec matches
+    # nothing git aborts the whole command and stages NEITHER. Most projects have
+    # no .curiosities/, so `curiosities/$PROJECT` usually does not exist, and the
+    # single combined add was silently staging nothing at all (exit 128, swallowed
+    # by `|| true`) — the mirrored logs then sat untracked until some later root
+    # session's blanket `add -A` happened to sweep them in. Found 2026-09-03.
+    git -C "$PARENT" add -A -- "logs/$PROJECT" 2>/dev/null || true
+    git -C "$PARENT" add -A -- "curiosities/$PROJECT" 2>/dev/null || true
   fi
 
   # Stage work, then unstage every submodule path before committing (rule 1).

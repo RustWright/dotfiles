@@ -1,2 +1,13 @@
 __pycache__/
 *.pyc
+
+# Session artifacts must NEVER be tracked here — this repo is PUBLIC.
+# The session hooks write .log/ into whatever repo they believe the session
+# belonged to. On 2026-09-03 a stale `cd` made them believe a private-workspace
+# session belonged to this repo, and `git add -A` published a 111KB transcript to
+# GitHub. The cwd bug is fixed (session-end.sh rule 4), but this is the layer that
+# holds even if that fix ever regresses: a misidentified repo can still misfile a
+# log here, it just can no longer publish one. Every other repo in this workflow
+# already ignores these; the asymmetry was the whole exposure.
+.log/
+.curiosities/
