@@ -145,6 +145,50 @@ main() {
     echo "session-start: WARNING — $R has $A commit(s) NOT on the remote. They will not reach your other device. Check /tmp/claude-session-end-debug.log for the failure, then: git -C $R pull --rebase && git -C $R push"
   done
 
+  # ── canary: untracked files about to be PUBLISHED to a public repo ──────────
+  # SessionEnd does `git add -A` in $CWD and commits everything, and since dotfiles
+  # af69170 the push that follows actually lands (it used to die in the claude-state
+  # push often enough to act as an accidental safety net). So an untracked file in a
+  # public repo gets published automatically, and a push to a public remote cannot be
+  # taken back.
+  #
+  # Scoped tight ON PURPOSE, three ways: only $CWD (a parent session never commits a
+  # submodule's tree — rule 1), only UNTRACKED files (modified tracked files are
+  # normal in-flight work here), and only PUBLIC repos. A warning that fires every
+  # session is one you stop reading within a week — the same reason the NEXT.md STALE
+  # canary excludes `auto:` commits.
+  #
+  # Visibility, NOT automation (user's decision, 2026-09-03): this reports so the
+  # human can gitignore / commit deliberately / move the file out. It never alters
+  # what any hook commits or pushes.
+  UNTRACKED="$(git -C "$CWD" ls-files --others --exclude-standard 2>/dev/null)"
+  if [ -n "$UNTRACKED" ]; then
+    # Cached per remote URL: one `gh` call a week per repo, and only when untracked
+    # files actually exist. Unknown visibility stays SILENT — a repo with no GitHub
+    # remote, or no `gh` auth, must not warn on every session.
+    VURL="$(git -C "$CWD" remote get-url origin 2>/dev/null)"
+    VIS=""
+    if [ -n "$VURL" ]; then
+      VDIR="$HOME/.cache/claude-repo-visibility"
+      VKEY="$(printf '%s' "$VURL" | md5sum | cut -c1-16)"
+      VFILE="$VDIR/$VKEY"
+      if [ -f "$VFILE" ] && [ -z "$(find "$VFILE" -mtime +7 2>/dev/null)" ]; then
+        VIS="$(cat "$VFILE" 2>/dev/null)"
+      else
+        VSLUG="$(printf '%s' "$VURL" | sed -E 's|^.*github\.com[:/]||; s|\.git$||')"
+        VIS="$(timeout 5 gh api "repos/$VSLUG" --jq '.visibility' 2>/dev/null || true)"
+        [ -n "$VIS" ] && { mkdir -p "$VDIR"; printf '%s' "$VIS" > "$VFILE"; }
+      fi
+    fi
+    if [ "$VIS" = "public" ]; then
+      UN="$(printf '%s\n' "$UNTRACKED" | grep -c '')"
+      echo "session-start: WARNING — $(basename "$CWD") is a PUBLIC repo and has $UN untracked file(s) that SessionEnd will commit and PUSH:"
+      printf '%s\n' "$UNTRACKED" | head -10 | sed 's|^|  |'
+      [ "$UN" -gt 10 ] && echo "  … and $((UN - 10)) more"
+      echo "session-start: gitignore them, commit them deliberately, or move them out before this session ends."
+    fi
+  fi
+
   # Gently advance submodules: fetch + ff the clean ones, skip dirty ones.
   git -C "$CWD" submodule --quiet foreach '
     if [ -z "$(git status --porcelain)" ]; then
