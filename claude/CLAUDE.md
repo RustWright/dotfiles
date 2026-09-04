@@ -118,17 +118,36 @@ project, in the session that already has its context.
 
 ## Curiosity Capture
 
-While working on any project, watch for **curiosities** — concepts the user surfaces
-but doesn't fully grasp. Triggers:
+The log exists for exactly one purpose: **candidate topics for `concepts` posts on
+mylearnbase.** It is not a list of things the user didn't know. If an entry could never
+become a technical post with an interactive demo, it does not belong there.
 
-- User asks "how does X actually work?" or "I don't really get this"
-- You half-explain something technical and the user moves on without engaging
-- The user pauses on a concept (longer reaction, off-tangent question) suggesting it didn't land
+**All three conditions must hold. Capture only then:**
 
-When you notice one, append a one-line entry to the project's curiosity log. Bias
-toward capturing — false positives are cheap; missed captures are unrecoverable. The
-cycle-close review pass decides what survives. (Syncing the log to the parent is
-automatic — the session hooks handle it; you only write the entry.)
+1. **The user said so themselves** — they explicitly asked "how does X actually work?" or
+   said they don't get it. **Never infer it** from them moving on, reacting slowly, or
+   changing the subject. That inference was the old rule's trigger and it manufactured noise.
+2. **It's a mechanism, not a procedure.** "Why does *that* produce *this*?" qualifies;
+   "how do I do X" never does, no matter how unfamiliar X is.
+3. **It could plausibly become a concepts post** — technical, demo-able, transferable.
+
+**Worked examples, from this user's own log (2026-09-04):** floating-point precision being
+relative to magnitude, object identity vs value equality, what a Kalman filter actually does
+— all correct. HP Instant Ink disabling a cartridge remotely, Canada Post mail forwarding,
+and a university's "fees arranged" state — **all wrong**, and named as such by the user.
+They are real mechanisms and genuinely interesting, and still not post material.
+
+**When in doubt, don't.** False positives are *not* cheap — they crowd the log, and it is
+the user who pays to read past them.
+
+**A real gap that fails the test is not a capture — it's work.** When the user surfaces
+something they don't understand that isn't post material (health coverage, tax mechanics,
+a government process), **ask whether they want it written up** before spending effort. If
+yes, research it properly, write a grounded doc with sources, and put any actions in the
+right tracker. Do not file it in the curiosity log as consolation.
+
+(Syncing the log to the parent is automatic — the session hooks handle it; you only write
+the entry.)
 
 **Where to write:** `<project-repo>/.curiosities/<cycle-id>.md`
 
