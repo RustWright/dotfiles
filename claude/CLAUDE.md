@@ -140,8 +140,10 @@ house rules because the draft happened to start in a different repo.
   A real style guide is backlogged in mylearnbase and **supersedes this when it lands**.
 - **Honest attribution.** Separate what the user originated from what Claude taught or
   captured. Never present a model explanation or a curiosity-log line as their words.
-- **Publish bar.** Learning-series posts ship only as technical-hiring-audience showcases.
-  "Can I explain it plainly" is a private exam, never a publish trigger.
+- **Publish bar.** Learning-series posts ship only as technical-hiring-audience showcases —
+  never for a lay/beginner audience, and **no beginner capstones**. "Can I explain it plainly"
+  is a private exam, never a publish trigger. Real candidates are *technical* theses (the
+  Goodhart/order-parameter or NumPy-vectorization kind), not plain-language re-explanations.
 
 ## Curiosity Capture
 
