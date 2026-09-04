@@ -112,17 +112,37 @@ main() {
       fi
     fi
 
-    # ── budget canary: the global rules tier ───────────────────────────────────
-    # Deliberately tighter than the memory cap, because the failure is worse. An
-    # oversized MEMORY.md merely truncates — lazy waste. Rules load in EVERY
-    # project on EVERY device, so an oversized tier is paid on every single
-    # session forever. The cure must not become the disease.
+    # ── budget canary: everything that ALWAYS loads ────────────────────────────
+    # CLAUDE.md and rules/ load together in EVERY project on EVERY device, so they
+    # share ONE budget. Policing only rules/ left the larger half unwatched: at the
+    # 2026-09-04 review CLAUDE.md was 191 lines against a rules tier of 159, and the
+    # 150-line cap governed 45% of the real footprint.
+    #
+    # Every line cap is paired with a BYTE cap — a line cap alone is subverted by
+    # simply writing longer lines (user, 2026-09-04).
+    #
+    # File COUNT is deliberately NOT checked. It cannot bind before the per-file cap
+    # does (12 x 30 = 360 lines, past the whole budget), and it actively penalises
+    # splitting an oversized rule in two — which is the fix the per-file cap asks for.
+    # The old "12 files" number applied to rules/ but had been misread as a cap on
+    # memory notes; there has never been one of those.
     if [ -d "$STATE/rules" ]; then
-      RC="$(find "$STATE/rules" -name '*.md' 2>/dev/null | wc -l)"
-      RL="$(cat "$STATE"/rules/*.md 2>/dev/null | grep -c '' || echo 0)"
-      if [ "${RC:-0}" -gt 10 ] || [ "${RL:-0}" -gt 120 ]; then
-        echo "session-start: NOTE — global rules tier is $RC files / $RL lines (budget 12 / 150). Every line here costs context in every session; merge or demote before adding more."
+      GL=0; GB=0
+      for f in "$STATE/CLAUDE.md" "$STATE"/rules/*.md; do
+        [ -f "$f" ] || continue
+        GL=$(( GL + $(grep -c '' "$f") )); GB=$(( GB + $(wc -c < "$f") ))
+      done
+      if [ "$GL" -gt 310 ] || [ "$GB" -gt 21504 ]; then
+        echo "session-start: NOTE — always-loaded tier (CLAUDE.md + rules/) is $GL lines / $GB bytes, against a 320-line / 22KB budget. Every line costs context in every session on every device; merge, demote to a skill, or move it to a project CLAUDE.md before adding more."
       fi
+      # Per-file: 30 lines / 2.5KB. A rule past this is doing more than one job.
+      for f in "$STATE"/rules/*.md; do
+        [ -f "$f" ] || continue
+        FL="$(grep -c '' "$f")"; FB="$(wc -c < "$f")"
+        if [ "$FL" -gt 30 ] || [ "$FB" -gt 2560 ]; then
+          echo "session-start: NOTE — rules/$(basename "$f") is $FL lines / $FB bytes, past the 30-line / 2.5KB per-file cap. Split it, or move the narrow half to a skill or a project CLAUDE.md."
+        fi
+      done
     fi
 
     # ── canary: files the PUBLIC-REPO GATE held back, on ANY device ─────────────

@@ -112,19 +112,17 @@ a directive (no `**Why:**`/`**How to apply:**` scaffolding — rules are read as
 instructions, not recalled as notes). A promotion that leaves the note behind has made
 things worse.
 
-**Respect the budget: 12 files, 150 lines.** An oversized `MEMORY.md` merely truncates —
-the tail stops loading, which is lazy waste. An oversized rules tier is paid on every
-session in every project on both devices, forever. SessionStart warns on both; when it
-flags a project's index, that is the cue to run a promote-and-prune pass for that
-project, in the session that already has its context.
+**Respect the budget — one cap over everything that always loads.** This file and
+`~/.claude/rules/` load together in every session on every device, so they are budgeted
+together: **320 lines / 22KB combined**, plus **30 lines / 2.5KB per rules file**. Every line
+cap is paired with a byte cap, because a line cap alone is trivially subverted by long lines.
+SessionStart warns on both halves.
 
-> ⚠️ **The 12-file half of this is UNDER REVIEW (user, 2026-09-04) — do not run a prune on
-> note *count* alone.** File count is the wrong metric: it says nothing about how much
-> context a note actually floods. The user intends to replace it with something keyed to
-> **file size / context-flooding risk**, and will set the limits in a dedicated session.
-> Until then, treat a high count as a prompt to look for *genuine* redundancy — duplication
-> across always-loaded files, chronicle, misfiled notes — and leave it alone if none is
-> there. Several projects are far over on count (omni-me is 100+); that is known, not news.
+**There is no cap on memory note count, and never has been.** The only memory canary measures
+`MEMORY.md` itself (200 lines / 25KB, past which the tail silently stops loading) — that is
+the cue to run a promote-and-prune pass for that project, in a session that already has its
+context. *Set 2026-09-04, replacing a "12 files, 150 lines" line that was enforced on `rules/`
+but had been misread as a limit on notes; a high note count is not, by itself, a finding.*
 
 ## Writing posts — from any project
 
