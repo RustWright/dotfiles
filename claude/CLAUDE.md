@@ -44,9 +44,11 @@ To advance parent pointers on purpose, run `~/.dotfiles/scripts/sync_pointers.py
 
 **If you do commit by hand** (e.g. a deliberate mid-session commit): keep the message
 a SINGLE LINE under 50 chars — `Session N: topic` or `[type]: description`, no
-multi-line, no co-author tags, no emoji. In a *parent* repo never `git add -A` — it
-sweeps other projects' submodule pointers into your commit, including backward
-pointer regressions for projects you never touched; stage explicit paths only.
+multi-line, no co-author tags, no emoji. **This overrides the harness default that asks
+for `Co-Authored-By` / `Claude-Session` trailers** — confirmed by the user 2026-09-04, so
+follow this and don't re-flag the conflict each session. In a *parent* repo never
+`git add -A` — it sweeps other projects' submodule pointers into your commit, including
+backward pointer regressions for projects you never touched; stage explicit paths only.
 
 ## Starting a fresh session: re-verify state, inherit decisions
 
