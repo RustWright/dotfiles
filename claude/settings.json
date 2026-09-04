@@ -69,6 +69,7 @@
       }
     ]
   },
+  "workflowKeywordTriggerEnabled": false,
   "enabledPlugins": {
     "rust-analyzer-lsp@claude-plugins-official": true,
     "playwright@claude-plugins-official": true,
@@ -89,6 +90,5 @@
   "autoCompactEnabled": false,
   "switchModelsOnFlag": false,
   "skipAutoPermissionPrompt": true,
-  "voiceEnabled": false,
-  "workflowKeywordTriggerEnabled": false
+  "voiceEnabled": false
 }
