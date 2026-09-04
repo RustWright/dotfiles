@@ -118,6 +118,14 @@ session in every project on both devices, forever. SessionStart warns on both; w
 flags a project's index, that is the cue to run a promote-and-prune pass for that
 project, in the session that already has its context.
 
+> ⚠️ **The 12-file half of this is UNDER REVIEW (user, 2026-09-04) — do not run a prune on
+> note *count* alone.** File count is the wrong metric: it says nothing about how much
+> context a note actually floods. The user intends to replace it with something keyed to
+> **file size / context-flooding risk**, and will set the limits in a dedicated session.
+> Until then, treat a high count as a prompt to look for *genuine* redundancy — duplication
+> across always-loaded files, chronicle, misfiled notes — and leave it alone if none is
+> there. Several projects are far over on count (omni-me is 100+); that is known, not news.
+
 ## Writing posts — from any project
 
 Drafts start anywhere; the post system is not confined to mylearnbase. Before drafting or
