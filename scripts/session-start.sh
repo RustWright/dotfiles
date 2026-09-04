@@ -47,7 +47,8 @@ main() {
     # cannot end up pointing at a directory nothing reads. $PWD is the fallback.
     HOOK_JSON="$(timeout 2 cat 2>/dev/null || true)"
     KEY="$(printf '%s' "$HOOK_JSON" | python3 -c "import json,sys,os; print(os.path.basename(os.path.dirname(json.load(sys.stdin).get('transcript_path',''))))" 2>/dev/null || true)"
-    [ -z "$KEY" ] && KEY="$(printf '%s' "$PWD" | sed 's|[/_]|-|g')"
+    KEY_TRUSTED=1
+    [ -z "$KEY" ] && { KEY="$(printf '%s' "$PWD" | sed 's|[/_]|-|g')"; KEY_TRUSTED=0; }
     SLUG="$(printf '%s' "$PWD" | sed "s|^$HOME/||" | sed 's|[/_]|-|g')"
 
     LINK="$STATE/projects/$KEY/memory"
@@ -83,8 +84,14 @@ main() {
         cp -an "$LINK"/. "$TARGET"/ 2>/dev/null || true
         rm -rf "$LINK" && ln -s "../../state/memory/$SLUG" "$LINK"
       fi
-    elif [ ! -e "$LINK" ] && [ ! -L "$LINK" ] && [ -d "$STATE/projects/$KEY" ]; then
-      mkdir -p "$TARGET"
+    elif [ ! -e "$LINK" ] && [ ! -L "$LINK" ] && { [ -d "$STATE/projects/$KEY" ] || [ "$KEY_TRUSTED" = 1 ]; }; then
+      # On the FIRST session from a new cwd, projects/$KEY does not exist yet — Claude
+      # Code creates it moments after this hook runs. Testing the directory alone
+      # therefore matched no branch at all and the session ran on EMPTY memory, silently,
+      # because the canaries above only cover a missing store or a dangling link. A
+      # transcript-derived KEY comes from Claude Code itself, so it is authoritative and
+      # the directory can be created here; a $PWD-derived guess still gets refused.
+      mkdir -p "$TARGET" "$STATE/projects/$KEY"
       ln -s "../../state/memory/$SLUG" "$LINK"
     fi
 
