@@ -118,11 +118,10 @@ together: **320 lines / 22KB combined**, plus **30 lines / 2.5KB per rules file*
 cap is paired with a byte cap, because a line cap alone is trivially subverted by long lines.
 SessionStart warns on both halves.
 
-**There is no cap on memory note count, and never has been.** The only memory canary measures
-`MEMORY.md` itself (200 lines / 25KB, past which the tail silently stops loading) — that is
-the cue to run a promote-and-prune pass for that project, in a session that already has its
-context. *Set 2026-09-04, replacing a "12 files, 150 lines" line that was enforced on `rules/`
-but had been misread as a limit on notes; a high note count is not, by itself, a finding.*
+**There is no cap on memory note count, and never has been** — a high note count is not, by
+itself, a finding. The only memory canary measures `MEMORY.md` itself (200 lines / 25KB, past
+which the tail silently stops loading); that is the cue to run a promote-and-prune pass for
+that project, in a session that already has its context.
 
 ## Writing posts — from any project
 
