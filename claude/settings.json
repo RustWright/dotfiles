@@ -89,6 +89,7 @@
   "theme": "dark-daltonized",
   "autoCompactEnabled": false,
   "switchModelsOnFlag": false,
+  "remoteControlAtStartup": false,
   "skipAutoPermissionPrompt": true,
   "voiceEnabled": false
 }
