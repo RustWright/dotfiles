@@ -226,7 +226,14 @@ main() {
   #
   # Deliberately VISIBILITY, NOT AUTOMATION, matching the doctrine in session-end.sh:
   # auto-pushing at session start is still an open user decision (see NEXT.md).
-  for R in "$CWD" "$STATE"; do
+  # $DOTFILES is in this list because it is the one repo EVERY session can edit while being
+  # the anchor of almost none — it sat 4 commits ahead for six hours on 2026-09-04 with
+  # nothing reporting it. The ff-only pull at the top of this file cannot catch that: with
+  # nothing to fetch it says "Already up to date" while the branch is ahead. session-push.sh
+  # now pushes it too, so anything reported here has already failed at least twice. In a
+  # session anchored at ~/.dotfiles, $CWD and $DOTFILES are the same path; the doubled
+  # warning is harmless and not worth a guard.
+  for R in "$CWD" "$STATE" "$DOTFILES"; do
     [ -n "$R" ] && [ -d "$R/.git" ] || continue
     A="$(git -C "$R" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
     [ "${A:-0}" -gt 0 ] || continue

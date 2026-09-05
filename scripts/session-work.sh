@@ -127,6 +127,37 @@ WORK_LOCK="/tmp/claude-session-work.$(printf '%s' "${CWD:-no-repo}" | md5sum | c
       git -C "$PARENT" add -A -- "curiosities/$PROJECT" 2>/dev/null || true
     fi
 
+    # ── repo-declared presubmit: fix-ups that must land INSIDE the auto-commit ──
+    # Runs ONLY if the repo declares one. Absent → a single stat(), nothing else changes;
+    # that is the whole reason it is declared per-repo rather than cased on here.
+    #
+    # WHY IT EXISTS. omni-me's CI gates every push on `cargo fmt --check`, and the
+    # auto-commit below is authored by this script AFTER the model's last turn — there is
+    # no point in the pipeline where a model can run. So "remember to fmt before you
+    # finish" can only ever cover edits made before that turn, and 2026-09-04 is the
+    # proof: 509672c was a deliberate `[fmt]: rustfmt both workspaces`, and 8fce3fb (the
+    # auto-commit two hours later) swept 29 hunks of drift straight back in and turned CI
+    # red. Same shape as NEXT.md's write trigger moving to completion-time.
+    #
+    # POSITION IS LOAD-BEARING: before `add -A`, never after. A formatter run after the
+    # staging leaves its rewrites as unstaged working-tree changes — the commit still
+    # carries the unformatted version (CI stays red) AND the next session's `add -A`
+    # sweeps the leftovers in as an unexplained diff.
+    #
+    # TRACKED IN THE REPO, not here, so the declaration travels: the other device
+    # inherits it on its next pull. `.git/hooks/` does not travel, which is why omni-me's
+    # privacy guard exists on exactly one machine.
+    #
+    # NON-FATAL by design. A formatter exits non-zero when the tree does not parse
+    # mid-edit, or when the toolchain is missing. Blocking the commit there would strand
+    # the session's work — the failure class this whole file exists to prevent. Bounded,
+    # because a detached process has no supervisor.
+    if [ -x "$CWD/.claude/presubmit.sh" ]; then
+      PRE_OUT="$(cd "$CWD" && timeout 120 ./.claude/presubmit.sh 2>&1)"; PRE_RC=$?
+      [ -n "$PRE_OUT" ] && say "presubmit: $PRE_OUT"
+      [ "$PRE_RC" -ne 0 ] && say "presubmit: exited $PRE_RC — committing anyway (non-fatal)"
+    fi
+
     # Stage work, then unstage every submodule path before committing.
     # A bare `git add -A` in a parent stages every dirty gitlink, recording a pointer to
     # an unpushed (or in-flight) submodule commit — a dangling gitlink that breaks fresh

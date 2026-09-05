@@ -92,6 +92,24 @@ push_if_ahead() {
 # behind it any more, so its position no longer costs anything if it fails.
 push_if_ahead "$HOME/.claude" "claude-state"
 
+# The workflow machinery itself. Every session can edit it — via `git -C`, per the standing
+# rule against `cd`-ing into either checkout — but it is the ANCHOR repo of almost none, and
+# only the anchor repo gets pushed. So nothing pushed it and nothing reported it: on
+# 2026-09-04 it sat 4 commits ahead for six hours, carrying a session-start.sh fix that left
+# the OTHER device loading empty memory. The ff-only pull in session-start.sh is structurally
+# blind to this — it prints "Already up to date" when YOU are the one ahead.
+#
+# Safe to push unattended precisely because no hook ever STAGES anything here: dotfiles gets
+# only deliberate hand-made commits, and push_if_ahead never commits, so this merely completes
+# an intent already expressed. Above the no-repo exit on purpose — a session launched outside
+# a checkout can still have edited the machinery.
+#
+# Derives its own path because $DOTFILES is ambiguous across this tree: the SCRIPTS dir in
+# session-work.sh / session-end.sh / session-compact.sh / public-gate.sh, the REPO ROOT in
+# session-start.sh. Hence the `/..` and the unambiguous name.
+DOTFILES_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+push_if_ahead "$DOTFILES_REPO" "dotfiles"
+
 [ -n "$REPO" ] || { log "done (no repo)"; exit 0; }
 
 # The work repo. A failure here is NOT fatal to the rest: the pointer guard below fails
