@@ -157,11 +157,10 @@ become a technical post with an interactive demo, it does not belong there.
    "how do I do X" never does, no matter how unfamiliar X is.
 3. **It could plausibly become a concepts post** — technical, demo-able, transferable.
 
-**Worked examples, from this user's own log (2026-09-04):** floating-point precision being
-relative to magnitude, object identity vs value equality, what a Kalman filter actually does
-— all correct. HP Instant Ink disabling a cartridge remotely, Canada Post mail forwarding,
-and a university's "fees arranged" state — **all wrong**, and named as such by the user.
-They are real mechanisms and genuinely interesting, and still not post material.
+**Calibration, from the user's own corrections:** floating-point precision being relative to
+magnitude, what a Kalman filter does — correct. HP Instant Ink disabling a cartridge
+remotely, a university's "fees arranged" state — **wrong**: real mechanisms, genuinely
+interesting, still not post material.
 
 **When in doubt, don't.** False positives are *not* cheap — they crowd the log, and it is
 the user who pays to read past them.
@@ -172,17 +171,11 @@ a government process), **ask whether they want it written up** before spending e
 yes, research it properly, write a grounded doc with sources, and put any actions in the
 right tracker. Do not file it in the curiosity log as consolation.
 
-(Syncing the log to the parent is automatic — the session hooks handle it; you only write
-the entry.)
-
 **Where to write:** `<project-repo>/.curiosities/<cycle-id>.md`
 
-- Resolve `<cycle-id>` by grepping `project.md` for `Cycle \d+` (matches both `**Status:** Cycle 3 Session 5` and `**Current Phase:** Cycle 2 Session 4`). Use the highest-numbered cycle found. Filename: `cycle-<N>.md`.
-- If no `project.md` or no `Cycle \d+` match: filename is `current.md`.
-- If the `.curiosities/` directory doesn't exist in the project repo: create it AND add `.curiosities/` to the project's `.gitignore` (mirrors the `.log/` pattern — gitignored in the submodule, parent-synced automatically at session end).
+- `<cycle-id>` = the highest `Cycle \d+` matched in `project.md` → `cycle-<N>.md`. No match, or no `project.md` → `current.md`.
+- If `.curiosities/` is absent: create it AND add it to the project's `.gitignore` (mirrors `.log/` — gitignored in the submodule, parent-synced by the session hooks).
 
-**Entry format:** `- [YYYY-MM-DD] <one-line curiosity>; <one-line trigger context>`
+**Entry:** `- [YYYY-MM-DD] <curiosity>; <trigger context>` — e.g. `- [2026-05-15] How do hashes actually work?; came up while implementing SHA-256 upload validation`
 
-Example: `- [2026-05-15] How do hashes actually work?; came up while implementing SHA-256 upload validation`
-
-This feeds the **concepts** post form on mylearnbase — surviving curiosities at cycle close become candidates for interactive-demo-driven posts. The form is documented in `~/productive_learning/projects/mylearnbase/editorial/concepts.md` for sessions working in that repo.
+Surviving curiosities at cycle close become candidates for the **concepts** post form, documented in `~/productive_learning/projects/mylearnbase/editorial/concepts.md`.
