@@ -24,6 +24,20 @@ main() {
   DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
   git -C "$DOTFILES" pull --ff-only 2>/dev/null || echo "session-start: WARNING — ~/.dotfiles pull failed; workflow machinery may be stale on this device."
 
+  # ── canary: git identity, without which EVERY auto-commit is REFUSED ─────────
+  # `gh auth login` sets push CREDENTIALS, not commit IDENTITY — wholly independent,
+  # so a device with perfect `gh` still fails every commit. Git derives an email from
+  # user@host, so the empty NAME is what actually errors. Device 3 lost a session's
+  # work to this on 2026-09-10: the hook staged, git refused, and the push phase then
+  # truthfully reported "nothing to push" — a silent failure that compounds every
+  # session, since each SessionEnd re-stages onto the same uncommitted pile.
+  # Deliberately DETECT-ONLY (user, 2026-09-10): the value is the user's to choose,
+  # and setting it here would hide the fact that a device was never set up.
+  # Runs above the is-a-repo guard — identity is per-device, not per-repo.
+  if [ -z "$(git config --get user.name 2>/dev/null)" ] || [ -z "$(git config --get user.email 2>/dev/null)" ]; then
+    echo "session-start: WARNING — git identity is NOT set on this device. Every SessionEnd commit will be REFUSED ('fatal: empty ident name') and your work will sit STAGED but uncommitted, unpushed, and invisible to your other devices. Fix before working: git config --global user.name \"<name>\" && git config --global user.email \"<id>+<user>@users.noreply.github.com\" — use the GitHub noreply address, not a real one, since ~/.dotfiles is a PUBLIC repo."
+  fi
+
   # ── cross-device memory + plans (the claude-state repo) ─────────────────────
   # Deliberately ABOVE the is-this-a-git-repo guard below: memory belongs to the
   # session, not to the work repo, so it must sync even when Claude is launched
