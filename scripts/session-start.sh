@@ -214,6 +214,19 @@ main() {
   git rev-parse --git-dir &>/dev/null || return 0
   CWD="$(git rev-parse --show-toplevel)"
 
+  # ── canary: THIS repo is on a DETACHED HEAD ─────────────────────────────────
+  # The severe half of the detached-submodule problem — the half that loses work.
+  # SessionEnd commits onto whatever HEAD is: a detached HEAD accepts the commit
+  # (orphaned, no branch points at it, discarded by the next `submodule update`)
+  # and the push then dies exit 128. Two checks BELOW also go quietly wrong here,
+  # which is why this must be reported first: the pull fails and blames "an
+  # unpushed local commit", and the ahead-count canary uses `@{u}`, which cannot
+  # resolve without a branch, so it silently reports 0 commits ahead.
+  # Cause is almost always a fresh clone: `submodule update --init` detaches every one.
+  if [ "$(git -C "$CWD" rev-parse --abbrev-ref HEAD 2>/dev/null)" = "HEAD" ]; then
+    echo "session-start: WARNING — $CWD is on a DETACHED HEAD at $(git -C "$CWD" rev-parse --short HEAD 2>/dev/null). SessionEnd will commit onto NO BRANCH (the commit is orphaned) and its push will FAIL with 'not currently on a branch'. Attach before working: git -C $CWD checkout <branch>. Note: 'git submodule status' does NOT reveal this — its (heads/...) suffix describes the COMMIT, not HEAD."
+  fi
+
   # Pull the current repo; autostash keeps any uncommitted work out of the way.
   #
   # Under the SAME per-repo lock session-work.sh takes, and this is now REQUIRED. The
@@ -300,17 +313,38 @@ main() {
   # thing at SessionEnd, but that is a moment nobody is reading — and since the body was
   # detached, it goes to the debug log only. THIS is the copy that gets read, and it
   # arrives at the one time it can still be acted on: the start of the next session.
+  # Detached is tested FIRST and reported, never fast-forwarded: the ff below is
+  # `merge --ff-only "@{u}"`, and `@{u}` is the upstream OF THE CURRENT BRANCH, so
+  # without a branch it cannot resolve — and `2>/dev/null || true` swallowed the
+  # error. Detached submodules were therefore skipped SILENTLY and forever, stalled
+  # at both ends: the tree never advances here, and a parent session never bumps the
+  # pointer. Found 2026-09-10 on device 3 with all 8 submodules detached.
   SUBOUT="$(git -C "$CWD" submodule --quiet foreach '
-    if [ -z "$(git status --porcelain)" ]; then
+    if [ "$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" = "HEAD" ]; then
+      echo "detached|$sm_path|$(git rev-parse --short HEAD 2>/dev/null)"
+    elif [ -z "$(git status --porcelain)" ]; then
       git fetch --quiet 2>/dev/null || true
       git merge --ff-only "@{u}" 2>/dev/null || true
     else
-      echo "session-start: skipping dirty submodule $sm_path (work in flight)"
+      echo "dirty|$sm_path"
     fi
   ' 2>/dev/null || true)"
-  if [ -n "$SUBOUT" ]; then
-    printf '%s\n' "$SUBOUT"
+
+  DIRTYSUB="$(printf '%s\n' "$SUBOUT" | grep '^dirty|' 2>/dev/null || true)"
+  DETSUB="$(printf '%s\n' "$SUBOUT" | grep '^detached|' 2>/dev/null || true)"
+
+  if [ -n "$DIRTYSUB" ]; then
+    printf '%s\n' "$DIRTYSUB" | while IFS='|' read -r _ p; do
+      echo "session-start: skipping dirty submodule $p (work in flight)"
+    done
     echo "session-start: a parent session NEVER commits a submodule's tree, so that work will not reach your other device. Commit from inside the submodule, or run the session there."
+  fi
+
+  if [ -n "$DETSUB" ]; then
+    printf '%s\n' "$DETSUB" | while IFS='|' read -r _ p sha; do
+      echo "session-start: WARNING — submodule $p is on a DETACHED HEAD at $sha."
+    done
+    echo "session-start: detached submodules are skipped by the fast-forward above and stay stale indefinitely, and a session run INSIDE one commits to no branch — that work is orphaned and its push fails. Fix each: git -C <path> checkout <branch>, then ~/.dotfiles/scripts/sync_pointers.py to integrate. 'git submodule status' will NOT show you this."
   fi
 
   # ── instant-resume handoff: NEXT.md ─────────────────────────────────────────
