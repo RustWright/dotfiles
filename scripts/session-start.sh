@@ -327,10 +327,13 @@ main() {
   # v6.0.0, whose templates need a newer Zola: every `zola build` failed to parse
   # and the cause looked like whatever the session had just edited.
   #
-  # `update = none` in .gitmodules is git's OWN way to say "do not update this
-  # automatically", so it is the marker rather than a bespoke ignore file: it is
-  # version-controlled, travels to every device, is understood by plain git, and
-  # is discoverable next to the submodule it describes.
+  # The marker is `pinned = true` under the submodule in .gitmodules: version-
+  # controlled, travels to every device, discoverable next to the submodule it
+  # describes. It is a key plain git does NOT know, and that is the point. The
+  # first version used git's own `update = none`, and every consumer of the repo
+  # obeyed it, not just this hook: Cloudflare Pages' clone printed "Skipping
+  # submodule", built mylearnbase with no theme, and four deploys failed
+  # (2026-09-16). This hook's policy must not change what a plain clone gets.
   #
   # Silent when correct, loud only on DRIFT. "This one is pinned" every session
   # is noise; "this pinned submodule is not at the commit the parent records" is
@@ -340,7 +343,7 @@ main() {
   # the pinned branch must come first or every session would nag to put a
   # vendored theme back on a branch — exactly the wrong advice.
   SUBOUT="$(git -C "$CWD" submodule --quiet foreach '
-    if [ "$(git -C "$toplevel" config -f .gitmodules --get submodule."$name".update 2>/dev/null)" = "none" ]; then
+    if [ "$(git -C "$toplevel" config -f .gitmodules --type=bool --get submodule."$name".pinned 2>/dev/null)" = "true" ]; then
       want="$(git -C "$toplevel" rev-parse "HEAD:$sm_path" 2>/dev/null || true)"
       have="$(git rev-parse HEAD 2>/dev/null || true)"
       if [ -n "$want" ] && [ -n "$have" ] && [ "$want" != "$have" ]; then
@@ -363,13 +366,13 @@ main() {
   if [ -n "$PINDRIFT" ]; then
     printf '%s\n' "$PINDRIFT" | while IFS='|' read -r _ p have want; do
       echo "session-start: WARNING — pinned submodule $p is at $have but this repo records $want."
-      # --checkout is REQUIRED, not decoration: `update = none` is exactly what
-      # makes plain `submodule update` print "Skipping submodule" and change
-      # nothing, so the obvious recovery command silently fails on the one class
-      # of submodule this warning is about. --checkout overrides the config.
+      # --checkout forces the recorded commit whatever the clone's LOCAL config
+      # says. `submodule init` copies `update` out of .gitmodules into .git/config
+      # and never overwrites it, so a clone initialised while `update = none` was
+      # the marker still skips the submodule on a plain `submodule update`.
       echo "session-start:   restore it before building: git -C \"$CWD\" submodule update --init --checkout \"$p\""
     done
-    echo "session-start: a pinned submodule is a vendored dependency (update = none in .gitmodules). Drift means something checked out a different version — the build will fail in ways that look unrelated to your edits."
+    echo "session-start: a pinned submodule is a vendored dependency (pinned = true in .gitmodules). Drift means something checked out a different version — the build will fail in ways that look unrelated to your edits."
   fi
 
   if [ -n "$DIRTYSUB" ]; then
