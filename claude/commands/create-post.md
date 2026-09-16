@@ -35,7 +35,7 @@ Each form has a different shape. The below is the quick-reference anchor for rou
 - **Tools (installed via `uv tool install`):** `logbook init` / `title` / `tags` / `exec` / `screenshot` / `cite` / `publish`. Cross-project — run from the project repo where the work is happening, NOT from mylearnbase. Prose sections (§3, §4, §5, §7) are filled by direct-editing the capture file at `<repo>/logbook/_drafts/<slug>.md`; there's no CLI for them.
 - **Scaffold:** `logbook init <project> <feature_name> --title "..."`. Mandatory `--title` (no auto-derivation); use `logbook title <slug> "..."` post-init to revise.
 - **Capture during the work**, not after. Section ownership per `editorial/logbook.md` §3 — LLM drafts descriptive prose first (§3-4) by editing the capture file; user owns voice-bearing sections (especially §7 Notes / look-back). **The LLM does not draft §7 in the user's voice without explicit user input.**
-- **Publish when feature lands:** `logbook publish <slug>` — runs `showboat verify` + `zola check` automatically; output at `mylearnbase/content/posts/logbook/<project>/<slug>/index.md` (Zola page bundle: slug directory + `index.md` + sibling images). Publish auto-rewrites image refs to `./<filename>` and normalizes stale cross-post link forms (`.md` ↔ `/index.md`).
+- **Publish when feature lands:** `logbook publish <slug>` — runs `showboat verify` + `zola check` automatically; output at `mylearnbase/content/posts/logbook/<project>/<slug>/index.md` (Zola page bundle: slug directory + `index.md` + sibling images). Publish auto-rewrites image refs to `./<filename>` and normalizes stale cross-post link forms (`.md` ↔ `/index.md`). The post lands as a draft; before flipping `draft = false` it needs a `description` (hand-added, or `--description` on republish, which keeps it thereafter).
 
 ### concepts
 
@@ -47,7 +47,7 @@ Each form has a different shape. The below is the quick-reference anchor for rou
 
 ### workflows
 
-- **Tool:** `workflows publish <source-doc-path>`. The source doc lives in the project repo (e.g., `PROJECT_PROCESS.md`); the published post is a synced view.
+- **Tool:** `workflows publish <source-doc-path>`. The source doc lives in the project repo (e.g., `PROJECT_PROCESS.md`); the published post is a synced view. A first publish needs `--description "..."` unless `--draft`; republishes keep it.
 - **Edit the source doc, then republish. Never edit the post directly** — the next republish overwrites it.
 - **Always preview with `--dry-run`** before republish; review the unified diff before committing.
 - **Supersession:** `workflows publish <new-source> --supersede-from <old-slug>` writes the new post and adds a banner to the old one.
@@ -90,6 +90,7 @@ After the workflow lands a file:
 - For tool-backed forms (`logbook`, `workflows`): the publish tool runs `zola check --skip-external-links` automatically. Confirm zero orphans.
 - For draft-direct forms (`concepts`, `opinions`, `resources`): run `cd ~/productive_learning/projects/mylearnbase && zola check --skip-external-links` after `draft = false`.
 - All forms: confirm `zola build` reports `0 orphan`.
+- **All forms: a published post needs a frontmatter `description`**, one sentence of about 160 characters at most (its search snippet and link-preview text). It is descriptive prose, so draft it and let the user approve; for opinions, summarize the take without voicing it. `zola build` fails on a published post without one, and `zola check` does not catch it.
 
 Then report to the user:
 
