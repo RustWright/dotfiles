@@ -402,26 +402,46 @@ main() {
   # NEXT.md carries DECISIONS + the next action. It is never a state snapshot —
   # state is always re-verified live (see CLAUDE.md). Two canaries keep it honest,
   # because a stale handoff is worse than none: it reads exactly like a fresh one.
-  NEXT="$CWD/NEXT.md"
+  #
+  # WHICH handoff: the one nearest the folder the session was LAUNCHED in, walking up
+  # to the repo root. $CWD is the git toplevel, so this used to print only the ROOT
+  # handoff — and a session started in a topic subfolder never saw its own. Verified
+  # 2026-09-16: ~/life/masters_planning sessions on 09-07 and 09-08 were handed
+  # ~/life/NEXT.md, whose only content was "resume in masters_planning/NEXT.md". Same
+  # shape for every course folder in ~/waterloo_grad_courses. Anchored on
+  # $CLAUDE_PROJECT_DIR (the launch dir, stable across `cd`), $PWD as the fallback.
+  TOP="$(cd "$CWD" && pwd -P)"
+  HDIR="$(cd "${CLAUDE_PROJECT_DIR:-$PWD}" 2>/dev/null && pwd -P)"
+  case "$HDIR/" in "$TOP"/*) ;; *) HDIR="$TOP" ;; esac
+  while [ "$HDIR" != "$TOP" ] && [ ! -f "$HDIR/NEXT.md" ]; do HDIR="$(dirname "$HDIR")"; done
+  NEXT="$HDIR/NEXT.md"
+  REL="${HDIR#"$TOP"}"; REL="${REL#/}"
+  DISP="${REL:+$REL/}NEXT.md"
   if [ -f "$NEXT" ]; then
-    echo "───── NEXT.md — handoff for $(basename "$CWD"): inherit these decisions, verify state live ─────"
+    echo "───── NEXT.md — handoff for $(basename "$HDIR"): inherit these decisions, verify state live ─────"
     cat "$NEXT"
     echo "───── end NEXT.md ─────"
+    # Only a pointer to the root handoff, never a second print: the nearer one is the
+    # one that names this session's work, and doubling it costs context every session.
+    [ -n "$REL" ] && [ -f "$TOP/NEXT.md" ] && echo "session-start: the repo root has its own handoff too ($TOP/NEXT.md) — read it only for cross-cutting decisions."
 
     # Staleness: count commits landed since NEXT.md was last written. Anchored on
     # the commit SHA, not a timestamp window, so the boundary commit can't be
     # double-counted. An untracked (brand-new) NEXT.md has no SHA and is fresh.
-    HSHA="$(git -C "$CWD" log -1 --format=%H -- NEXT.md 2>/dev/null)"
+    # A subfolder handoff counts only commits touching its own folder — a sibling
+    # course's work does not make it stale. The root count stays unscoped, exactly
+    # as before (a "." pathspec would start pruning merge commits).
+    HSHA="$(git -C "$CWD" log -1 --format=%H -- "$DISP" 2>/dev/null)"
     if [ -n "$HSHA" ]; then
       # Exclude the hooks' own "auto:" checkpoints. They land on EVERY session end
       # and compact, so counting them would report "STALE: 1" every single time —
       # a warning that fires unconditionally is one you stop reading within a week,
       # which is the same way the --since boundary bug would have killed it.
-      BEHIND="$(git -C "$CWD" rev-list --count --invert-grep --grep='^auto:' "$HSHA"..HEAD 2>/dev/null || echo 0)"
+      BEHIND="$(git -C "$CWD" rev-list --count --invert-grep --grep='^auto:' "$HSHA"..HEAD ${REL:+-- "$REL"} 2>/dev/null || echo 0)"
       if [ "${BEHIND:-0}" -gt 0 ]; then
         HT="$(git -C "$CWD" log -1 --format=%ct "$HSHA" 2>/dev/null || echo 0)"
         RT="$(git -C "$CWD" log -1 --format=%ct 2>/dev/null || echo 0)"
-        echo "session-start: WARNING — NEXT.md is STALE: $BEHIND commit(s) landed after it was last written ($(( (RT - HT) / 86400 )) days ago). Treat it as a lead, not the truth; rewrite it the moment the next action it names is done."
+        echo "session-start: WARNING — $DISP is STALE: $BEHIND commit(s) landed after it was last written ($(( (RT - HT) / 86400 )) days ago). Treat it as a lead, not the truth; rewrite it the moment the next action it names is done."
       fi
     fi
 
@@ -429,7 +449,7 @@ main() {
     # the thing that failed before — a 161-line "handoff" that was really a
     # context dump, and rotted unnoticed for 42 days.
     LINES="$(grep -c '' "$NEXT" 2>/dev/null || echo 0)"
-    [ "${LINES:-0}" -gt 40 ] && echo "session-start: NOTE — NEXT.md is $LINES lines (cap 40). It is drifting into a state snapshot; trim it back to decisions + next action."
+    [ "${LINES:-0}" -gt 40 ] && echo "session-start: NOTE — $DISP is $LINES lines (cap 40). It is drifting into a state snapshot; trim it back to decisions + next action."
   else
     echo "session-start: no NEXT.md in $CWD — there is no handoff. Write one as soon as you finish the first stretch of work (see ~/.claude/CLAUDE.md, Starting a fresh session)."
   fi
