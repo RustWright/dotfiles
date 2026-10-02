@@ -1,35 +1,17 @@
 ## Session Sync — Automatic (do nothing)
 
-Session git sync is handled entirely by hooks in `~/.dotfiles/scripts/`, wired in
-`~/.dotfiles/claude/settings.json`. **Do not run any start- or end-of-session git
-ritual by hand** — no `git pull` at the start, no `/export`, no commit / push /
-parent-sync at the end. Doing it manually now *fights* the hooks. What runs for you:
+Hooks in `~/.dotfiles/scripts/` (wired in `~/.dotfiles/claude/settings.json`) pull at
+SessionStart and commit + push the current repo, `claude-state` and rendered logs at
+PreCompact / SessionEnd. **Never run a start- or end-of-session git ritual by hand** — no
+pull, no `/export`, no commit / push / parent-sync; doing it manually fights the hooks.
+Only the launch repo is committed: edits to other repos (`~/.dotfiles`, `~/life`) are yours
+to commit by hand.
 
-- **SessionStart** (`session-start.sh`): fast-forwards `~/.dotfiles` itself (so the
-  workflow machinery stays current across devices), pulls the `claude-state` repo
-  (memory + plans, below), pulls the current repo with `--autostash`, then
-  fast-forwards each *clean* submodule and leaves *dirty* ones untouched (never
-  strands in-flight work).
-- **PreCompact** (`session-compact.sh`) and **SessionEnd** (`session-end.sh`): render
-  this session's transcript into a readable `.log/` file, mirror `.log/` and
-  `.curiosities/` into the parent's `logs/<project>/` and `curiosities/<project>/`,
-  then commit + push work in the current repo — and commit + push `claude-state`.
-  Inside a submodule they also advance the parent's pointer — **but only if that
-  submodule HEAD is already on its remote.**
-
-**Memory and plans sync too — also automatically.** `~/.claude` is itself a private
-git repo (`claude-state`) with a **deny-by-default** `.gitignore`: everything is
-ignored except memory notes and `plans/`, so a credential file Anthropic drops in
-can never be committed by accident. Never sync memory by hand, and never add to that
-allowlist casually — its whole value is that unknown new files stay invisible.
-
-The one thing worth knowing about the layout: memory notes physically live at
-`~/.claude/state/memory/<slug>/`, where `<slug>` is the working directory **relative
-to `$HOME`**, flattened. The per-device directory Claude Code actually reads
-(`~/.claude/projects/<key>/memory`) is a **symlink** onto that slug. This exists
-because `<key>` is built from the *absolute* path, which differs per machine
-(`/home/efe` vs `/home/me`) — the `$HOME`-relative slug does not. Write to memory
-normally; the symlink is transparent.
+**Memory syncs too.** `~/.claude` is the private `claude-state` repo with a
+**deny-by-default** `.gitignore` (only memory notes and `plans/` are tracked). Never sync it
+by hand, and never widen that allowlist casually — its value is that unknown new files,
+credentials included, stay invisible. Memory is keyed by the working directory relative to
+`$HOME`, so **moving or renaming a project folder orphans its memory.**
 
 If SessionStart prints a **`MEMORY MERGE NEEDED`** or **`WARNING`** line about
 memory, stop and deal with it: the first means the same note differs on both devices
