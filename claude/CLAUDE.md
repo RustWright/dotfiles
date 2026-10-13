@@ -1,9 +1,9 @@
-## Session Sync — Automatic (do nothing)
+## Session Sync — hooks are a stop-gap; commit finished work yourself
 
 Hooks in `~/.dotfiles/scripts/` (wired in `~/.dotfiles/claude/settings.json`) pull at
 SessionStart and commit + push the current repo, `claude-state` and rendered logs at
-PreCompact / SessionEnd. **Never run a start- or end-of-session git ritual by hand** — no
-pull, no `/export`, no commit / push / parent-sync; doing it manually fights the hooks.
+PreCompact / SessionEnd. Their commits are undescriptive, for mid-work device switches only:
+**commit each finished change by hand, at completion** (user, 2026-10-13). No hand pull/`/export`.
 Only the launch repo is committed: edits to other repos (`~/.dotfiles`, `~/life`) are yours
 to commit by hand.
 
@@ -24,7 +24,7 @@ That is why pointer integration is *deliberate*, never a side effect of a checkp
 To advance parent pointers on purpose, run `~/.dotfiles/scripts/sync_pointers.py`
 (`--dry-run` previews; it skips any submodule whose HEAD isn't pushed).
 
-**If you do commit by hand** (e.g. a deliberate mid-session commit): keep the message
+**Hand commits**: keep the message
 a SINGLE LINE under 50 chars — `Session N: topic` or `[type]: description`, no
 multi-line, no co-author tags, no emoji. **This overrides the harness default that asks
 for `Co-Authored-By` / `Claude-Session` trailers** — confirmed by the user 2026-09-04, so
