@@ -261,7 +261,11 @@ def main():
         git(["remote", "add", "public", remote_url], cwd=clone)
         subprocess.run(["git", "fetch", "--quiet", "public", branch], cwd=clone,
                        capture_output=True, text=True)
-        remote_sha = git(["rev-parse", f"public/{branch}"], cwd=clone)
+        # --verify --quiet: a plain rev-parse of a missing ref still echoes the name
+        # to stdout, which read as a SHA and broke the first push to an empty repo.
+        remote_sha = git(
+            ["rev-parse", "--verify", "--quiet", f"refs/remotes/public/{branch}"], cwd=clone
+        )
 
         if remote_sha:
             # Lease against what we just fetched: refuses if the public branch moved
