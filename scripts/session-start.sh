@@ -453,6 +453,18 @@ main() {
   else
     echo "session-start: no NEXT.md in $CWD — there is no handoff. Write one as soon as you finish the first stretch of work (see ~/.claude/CLAUDE.md, Starting a fresh session)."
   fi
+
+  # tasks.md cap: the cycle's open work, reset each cycle. Uncapped, it becomes the
+  # dumping ground for rulings and narrative (omni-me's reached 5,810 lines / 498 KB
+  # before its 2026-11-12 reset). Lines AND bytes, like every cap here.
+  TASKS="$HDIR/tasks.md"; [ -f "$TASKS" ] || TASKS="$TOP/tasks.md"
+  if [ -f "$TASKS" ]; then
+    TL="$(grep -c '' "$TASKS" 2>/dev/null || echo 0)"
+    TB="$(wc -c < "$TASKS" 2>/dev/null || echo 0)"
+    if [ "${TL:-0}" -gt 400 ] || [ "${TB:-0}" -gt 40960 ]; then
+      echo "session-start: NOTE — ${TASKS#"$TOP"/} is $TL lines / $TB bytes (cap 400 / 40KB). Rulings go to project.md and rationale to docs; prune closed items before adding more."
+    fi
+  fi
 }
 
 main "$@"
